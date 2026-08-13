@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ServiceHeader from "./ServiceHeader";
-import { supabaseAdmin } from "@/app/lib/supabase-admin";
 import { notFound } from "next/navigation";
 import {
   SITE_URL,
@@ -22,7 +21,6 @@ type PageProps = {
     city: string;
   }>;
 };
-
 
 type ServiceContact = {
   phone_number: string | null;
@@ -239,6 +237,11 @@ async function getGoogleMapsEmbedUrl(value: string) {
   return "";
 }
 
+/*
+ * مهم:
+ * هذه الصفحة تعتمد على Supabase وقت تشغيل الطلب،
+ * وليس أثناء عملية Build.
+ */
 export const dynamic = "force-dynamic";
 export const dynamicParams = false;
 
@@ -312,7 +315,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function ServiceCityPage({ params }: PageProps) {
+export default async function ServiceCityPage({
+  params,
+}: PageProps) {
   const { service: serviceParam, city: cityParam } = await params;
 
   if (!isServiceSlug(serviceParam) || !isCitySlug(cityParam)) {
@@ -322,7 +327,19 @@ export default async function ServiceCityPage({ params }: PageProps) {
   const service = services[serviceParam];
   const city = cities[cityParam];
   const seoTitle = getSeoTitle(service, city);
-  const canonical = getServiceCityUrl(service.slug, city.slug);
+  const canonical = getServiceCityUrl(
+    service.slug,
+    city.slug,
+  );
+
+  /*
+   * مهم جدًا:
+   * لا نستورد supabaseAdmin أعلى الملف.
+   * يتم تحميله هنا فقط وقت تشغيل الصفحة.
+   */
+  const { supabaseAdmin } = await import(
+    "@/app/lib/supabase-admin"
+  );
 
   const {
     data: contactData,
@@ -380,9 +397,7 @@ export default async function ServiceCityPage({ params }: PageProps) {
 
   const googleMapsEmbedUrl =
     contactIsActive && googleMapsUrl
-      ? await getGoogleMapsEmbedUrl(
-          googleMapsUrl,
-        )
+      ? await getGoogleMapsEmbedUrl(googleMapsUrl)
       : "";
 
   const whatsappMessage = encodeURIComponent(
@@ -401,7 +416,8 @@ export default async function ServiceCityPage({ params }: PageProps) {
     .map((slug) => cities[slug])
     .filter(
       (item) =>
-        item.region === city.region && item.slug !== city.slug,
+        item.region === city.region &&
+        item.slug !== city.slug,
     )
     .slice(0, 5);
 
@@ -474,19 +490,29 @@ export default async function ServiceCityPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(serviceSchema).replace(/</g, "\\u003c"),
+          __html: JSON.stringify(serviceSchema).replace(
+            /</g,
+            "\\u003c",
+          ),
         }}
       />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c"),
+          __html: JSON.stringify(
+            breadcrumbSchema,
+          ).replace(/</g, "\\u003c"),
         }}
       />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c"),
+          __html: JSON.stringify(faqSchema).replace(
+            /</g,
+            "\\u003c",
+          ),
         }}
       />
 
@@ -502,13 +528,18 @@ export default async function ServiceCityPage({ params }: PageProps) {
               aria-label="مسار الصفحة"
               className="mx-auto flex max-w-max flex-wrap items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-white/55"
             >
-              <Link href="/" className="transition hover:text-white">
+              <Link
+                href="/"
+                className="transition hover:text-white"
+              >
                 الرئيسية
               </Link>
               <span>/</span>
               <span>{service.name}</span>
               <span>/</span>
-              <span className="text-[#e8ad45]">{city.name}</span>
+              <span className="text-[#e8ad45]">
+                {city.name}
+              </span>
             </nav>
 
             <div className="mx-auto mt-7 h-1 w-16 rounded-full bg-[#e8ad45]" />
@@ -518,8 +549,9 @@ export default async function ServiceCityPage({ params }: PageProps) {
             </h1>
 
             <p className="mx-auto mt-6 max-w-3xl text-[16px] leading-9 text-white/70 md:text-lg">
-              {service.intro} هذه الصفحة مخصصة لعرض {service.pluralName} في{" "}
-              {city.name} التابعة لـ{city.region}.
+              {service.intro} هذه الصفحة مخصصة لعرض{" "}
+              {service.pluralName} في {city.name} التابعة لـ
+              {city.region}.
             </p>
 
             {contactIsActive ? (
@@ -589,6 +621,7 @@ export default async function ServiceCityPage({ params }: PageProps) {
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#e8ad45]/10 font-black text-[#e8ad45]">
                       ✓
                     </span>
+
                     <p className="text-sm leading-7 text-white/70">
                       {detail}
                     </p>
@@ -604,23 +637,38 @@ export default async function ServiceCityPage({ params }: PageProps) {
 
               <dl className="mt-5 space-y-4">
                 <div className="rounded-2xl border border-white/10 bg-[#031225]/70 p-4">
-                  <dt className="text-xs text-white/45">الخدمة</dt>
-                  <dd className="mt-2 font-black">{service.name}</dd>
+                  <dt className="text-xs text-white/45">
+                    الخدمة
+                  </dt>
+                  <dd className="mt-2 font-black">
+                    {service.name}
+                  </dd>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-[#031225]/70 p-4">
-                  <dt className="text-xs text-white/45">المدينة</dt>
-                  <dd className="mt-2 font-black">{city.name}</dd>
+                  <dt className="text-xs text-white/45">
+                    المدينة
+                  </dt>
+                  <dd className="mt-2 font-black">
+                    {city.name}
+                  </dd>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-[#031225]/70 p-4">
-                  <dt className="text-xs text-white/45">المنطقة</dt>
-                  <dd className="mt-2 font-black">{city.region}</dd>
+                  <dt className="text-xs text-white/45">
+                    المنطقة
+                  </dt>
+                  <dd className="mt-2 font-black">
+                    {city.region}
+                  </dd>
                 </div>
 
                 {contactIsActive && googleMapsUrl && (
                   <div className="rounded-2xl border border-white/10 bg-[#031225]/70 p-4">
-                    <dt className="text-xs text-white/45">الموقع</dt>
+                    <dt className="text-xs text-white/45">
+                      الموقع
+                    </dt>
+
                     <dd className="mt-2">
                       <a
                         href={googleMapsUrl}
@@ -628,7 +676,9 @@ export default async function ServiceCityPage({ params }: PageProps) {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 font-black text-[#e8ad45] transition hover:text-[#f3c36f]"
                       >
-                        <span aria-hidden="true">📍</span>
+                        <span aria-hidden="true">
+                          📍
+                        </span>
                         فتح الموقع في Google Maps
                       </a>
                     </dd>
@@ -660,7 +710,9 @@ export default async function ServiceCityPage({ params }: PageProps) {
                     rel="noopener noreferrer"
                     className="mt-5 flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-[#e8ad45] px-5 text-sm font-black text-[#031225] transition hover:-translate-y-0.5"
                   >
-                    <span aria-hidden="true">📍</span>
+                    <span aria-hidden="true">
+                      📍
+                    </span>
                     عرض الموقع في Google Maps
                   </a>
                 )}
@@ -684,6 +736,7 @@ export default async function ServiceCityPage({ params }: PageProps) {
                   <span className="text-sm text-white/45">
                     {item.pluralName}
                   </span>
+
                   <h3 className="mt-2 text-xl font-black text-[#e8ad45]">
                     {item.searchName} {city.name}
                   </h3>
@@ -728,6 +781,7 @@ export default async function ServiceCityPage({ params }: PageProps) {
                   <h3 className="text-lg font-black text-[#e8ad45]">
                     {item.question}
                   </h3>
+
                   <p className="mt-3 text-sm leading-8 text-white/68">
                     {item.answer}
                   </p>
@@ -743,7 +797,10 @@ export default async function ServiceCityPage({ params }: PageProps) {
           <span className="block text-2xl font-black text-[#e8ad45]">
             المملكة
           </span>
-          <span className="mt-1 block font-bold">للخدمات المنزلية</span>
+
+          <span className="mt-1 block font-bold">
+            للخدمات المنزلية
+          </span>
         </Link>
 
         <p className="mt-6 text-xs text-white/40">
