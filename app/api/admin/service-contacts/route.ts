@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "../../../lib/admin-auth";
-import { supabaseAdmin } from "../../../lib/supabase-admin";
+import { getSupabaseAdmin } from "../../../lib/supabase-admin";
 import {
   isCitySlug,
   isServiceSlug,
@@ -62,7 +62,7 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from("service_contacts")
     .select(
       `
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from("service_contacts")
     .upsert(
       {
