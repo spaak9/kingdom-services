@@ -238,6 +238,29 @@ export default function HomePage() {
           <h2 className="text-2xl font-black text-[#e8ad45]">المملكة</h2>
           <p className="mt-1 font-bold">للخدمات المنزلية</p>
 
+          <a
+            href="https://wa.me/966598863130"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="تواصل معنا عبر واتساب"
+            className="mt-7 flex min-h-14 w-full items-center justify-center rounded-xl border border-white/25 bg-transparent px-5 text-base font-black text-white transition duration-300 hover:border-[#25D366] hover:bg-[#25D366]/10 active:scale-[0.99] sm:mx-auto sm:max-w-xl sm:text-lg"
+          >
+            <span className="flex items-center justify-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-white">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M12.04 2a9.83 9.83 0 0 0-8.45 14.84L2 22l5.31-1.54A9.96 9.96 0 1 0 12.04 2Zm0 17.98a8.03 8.03 0 0 1-4.09-1.12l-.29-.17-3.15.91.93-3.06-.19-.31a7.94 7.94 0 1 1 6.79 3.75Zm4.4-5.96c-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.19-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.69 2.58 4.1 3.62.57.25 1.02.39 1.37.5.58.18 1.1.16 1.51.1.46-.07 1.43-.58 1.63-1.15.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z" />
+                </svg>
+              </span>
+              تواصل عبر واتساب
+            </span>
+          </a>
+
           <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm text-white/60">
             <a href="/privacy" className="transition hover:text-white">
               سياسة الخصوصية
@@ -258,6 +281,13 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      <style>{`
+        /* الصفحة الرئيسية: إخفاء زر الواتساب العائم واستبداله بزر داخل الفوتر */
+        .whatsapp-float {
+          display: none !important;
+        }
+      `}</style>
     </div>
   );
 }
