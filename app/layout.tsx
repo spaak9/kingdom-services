@@ -109,7 +109,6 @@ export default function RootLayout({
 
         {children}
 
-        {/* واتساب يظهر في جميع الصفحات ما عدا الصفحة الرئيسية */}
         <WhatsAppFloat />
       </body>
     </html>

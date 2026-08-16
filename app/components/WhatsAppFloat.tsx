@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 export default function WhatsAppFloat() {
   const pathname = usePathname();
 
-  // الصفحة الرئيسية لها تصميم واتساب خاص بها، لذلك نخفي الزر العائم هنا.
+  // لا يظهر الواتساب العائم في الصفحة الرئيسية
   if (pathname === "/") {
     return null;
   }
@@ -105,10 +105,8 @@ export default function WhatsAppFloat() {
         }
 
         .whatsapp-label {
-          animation: whatsappLabelIn
-            0.75s
-            cubic-bezier(0.22, 1, 0.36, 1)
-            both;
+          animation: whatsappLabelIn 0.75s
+            cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
         .whatsapp-ring {
