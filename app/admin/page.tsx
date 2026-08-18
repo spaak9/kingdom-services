@@ -85,6 +85,7 @@ export default function AdminPage() {
   const loadContacts = useCallback(async () => {
     setLoading(true);
     setMessage("");
+    setMessageType("");
 
     try {
       const response = await fetch(
@@ -92,6 +93,7 @@ export default function AdminPage() {
         {
           method: "GET",
           cache: "no-store",
+          credentials: "include",
         },
       );
 
@@ -100,9 +102,16 @@ export default function AdminPage() {
         contacts?: ServiceContact[];
       };
 
+      /*
+       * مهم:
+       * لا نرجع المستخدم للرئيسية إذا كان API يرجع 401.
+       * نخلي لوحة الإدارة مفتوحة ونظهر الخطأ للمستخدم.
+       */
       if (response.status === 401) {
-        window.location.href = "/";
-        return;
+        throw new Error(
+          result.message ||
+            "الجلسة غير صالحة أو لم يتم التعرف على تسجيل الدخول.",
+        );
       }
 
       if (!response.ok) {
@@ -147,7 +156,11 @@ export default function AdminPage() {
 
     setMessage("");
     setMessageType("");
-  }, [selectedContact, serviceSlug, citySlug]);
+  }, [
+    selectedContact,
+    serviceSlug,
+    citySlug,
+  ]);
 
   function changeSection(section: AdminSection) {
     setActiveSection(section);
@@ -172,18 +185,20 @@ export default function AdminPage() {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({
             service_slug: serviceSlug,
             city_slug: citySlug,
 
-            // نحافظ على أسماء أعمدة Supabase الحالية:
-            // whatsapp_number = الصندوق الأول
-            // phone_number = الصندوق الثاني
+            // الصندوق الأول = واتساب
             whatsapp_number: form.box_one,
+
+            // الصندوق الثاني = اتصال
             phone_number: form.box_two,
 
             google_maps_url:
               form.google_maps_url,
+
             is_active: form.is_active,
           }),
         },
@@ -194,14 +209,21 @@ export default function AdminPage() {
         contact?: ServiceContact;
       };
 
+      /*
+       * لا نرجع للرئيسية عند 401.
+       * نظهر السبب داخل لوحة الإدارة.
+       */
       if (response.status === 401) {
-        window.location.href = "/";
-        return;
+        throw new Error(
+          result.message ||
+            "الجلسة غير صالحة أو لم يتم التعرف على تسجيل الدخول.",
+        );
       }
 
       if (!response.ok || !result.contact) {
         throw new Error(
-          result.message || "تعذر حفظ البيانات.",
+          result.message ||
+            "تعذر حفظ البيانات.",
         );
       }
 
@@ -255,6 +277,7 @@ export default function AdminPage() {
       className="min-h-screen bg-[#031225] px-4 py-6 text-white sm:py-8"
     >
       <div className="mx-auto max-w-6xl">
+        {/* Header */}
         <header className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-[#071a31] p-5 shadow-2xl sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-bold text-[#e8ad45]">
@@ -289,6 +312,7 @@ export default function AdminPage() {
           </div>
         </header>
 
+        {/* Sections */}
         <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <AdminSectionButton
             active={activeSection === "contacts"}
@@ -305,7 +329,9 @@ export default function AdminPage() {
             icon="⌖"
             title="الموقع"
             description="رابط موقع Google Maps."
-            onClick={() => changeSection("maps")}
+            onClick={() =>
+              changeSection("maps")
+            }
           />
 
           <AdminSectionButton
@@ -321,6 +347,7 @@ export default function AdminPage() {
           />
         </section>
 
+        {/* Main form */}
         <form
           onSubmit={saveData}
           className="mt-6 overflow-hidden rounded-3xl border border-[#e8ad45]/20 bg-[#081d37] shadow-2xl"
@@ -344,6 +371,7 @@ export default function AdminPage() {
           </div>
 
           <div className="space-y-5 p-5 sm:p-6">
+            {/* Service + City */}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-2 block text-sm font-bold text-white/75">
@@ -404,12 +432,14 @@ export default function AdminPage() {
               </label>
             </div>
 
+            {/* Loading */}
             {loading ? (
               <div className="rounded-2xl border border-white/10 bg-[#031225] p-5 text-center text-sm text-white/55">
                 جاري تحميل البيانات...
               </div>
             ) : (
               <>
+                {/* Contacts */}
                 {activeSection ===
                   "contacts" && (
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -473,6 +503,7 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                {/* Google Maps */}
                 {activeSection === "maps" && (
                   <label className="block">
                     <span className="mb-2 block text-sm font-bold text-white/75">
@@ -503,6 +534,7 @@ export default function AdminPage() {
                   </label>
                 )}
 
+                {/* Visibility */}
                 {activeSection ===
                   "visibility" && (
                   <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#031225] p-5">
@@ -548,6 +580,7 @@ export default function AdminPage() {
                   </div>
                 )}
 
+                {/* Existing data */}
                 <div className="rounded-2xl border border-white/10 bg-[#031225]/70 px-4 py-3 text-xs leading-6 text-white/45">
                   {selectedContact
                     ? "توجد بيانات محفوظة لهذه الخدمة والمدينة، وسيتم تعديلها عند الحفظ."
@@ -556,6 +589,7 @@ export default function AdminPage() {
               </>
             )}
 
+            {/* Message */}
             {message && (
               <div
                 className={`rounded-2xl border px-4 py-3 text-sm font-bold ${
@@ -568,6 +602,7 @@ export default function AdminPage() {
               </div>
             )}
 
+            {/* Save */}
             <button
               type="submit"
               disabled={saving || loading}

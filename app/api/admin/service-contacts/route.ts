@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+
 import { isAdminAuthenticated } from "../../../lib/admin-auth";
 import { getSupabaseAdmin } from "../../../lib/supabase-admin";
+
 import {
   isCitySlug,
   isServiceSlug,
@@ -18,6 +20,25 @@ type ContactBody = {
   is_active?: unknown;
 };
 
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "no-store, no-cache, must-revalidate, max-age=0",
+  };
+}
+
+function unauthorizedResponse() {
+  return NextResponse.json(
+    {
+      message: "غير مصرح لك بالدخول.",
+    },
+    {
+      status: 401,
+      headers: noStoreHeaders(),
+    },
+  );
+}
+
 function isValidGoogleMapsUrl(value: string) {
   if (!value) {
     return true;
@@ -25,7 +46,8 @@ function isValidGoogleMapsUrl(value: string) {
 
   try {
     const url = new URL(value);
-    const hostname = url.hostname.toLowerCase();
+    const hostname =
+      url.hostname.toLowerCase();
 
     if (url.protocol !== "https:") {
       return false;
@@ -42,43 +64,36 @@ function isValidGoogleMapsUrl(value: string) {
   }
 }
 
-function noStoreHeaders() {
-  return {
-    "Cache-Control":
-      "no-store, no-cache, must-revalidate, max-age=0",
-  };
-}
-
 export async function GET() {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json(
-      {
-        message: "غير مصرح لك بالدخول.",
-      },
-      {
-        status: 401,
-        headers: noStoreHeaders(),
-      },
-    );
+  const authenticated =
+    await isAdminAuthenticated();
+
+  if (!authenticated) {
+    return unauthorizedResponse();
   }
 
-  const { data, error } = await getSupabaseAdmin()
-    .from("service_contacts")
-    .select(
-      `
-        id,
-        service_slug,
-        city_slug,
-        phone_number,
-        whatsapp_number,
-        google_maps_url,
-        is_active,
-        created_at,
-        updated_at
-      `,
-    )
-    .order("city_slug", { ascending: true })
-    .order("service_slug", { ascending: true });
+  const { data, error } =
+    await getSupabaseAdmin()
+      .from("service_contacts")
+      .select(
+        `
+          id,
+          service_slug,
+          city_slug,
+          phone_number,
+          whatsapp_number,
+          google_maps_url,
+          is_active,
+          created_at,
+          updated_at
+        `,
+      )
+      .order("city_slug", {
+        ascending: true,
+      })
+      .order("service_slug", {
+        ascending: true,
+      });
 
   if (error) {
     console.error(
@@ -88,7 +103,8 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        message: "تعذر تحميل بيانات الخدمات.",
+        message:
+          "تعذر تحميل بيانات الخدمات.",
       },
       {
         status: 500,
@@ -108,17 +124,14 @@ export async function GET() {
   );
 }
 
-export async function POST(request: Request) {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json(
-      {
-        message: "غير مصرح لك بالدخول.",
-      },
-      {
-        status: 401,
-        headers: noStoreHeaders(),
-      },
-    );
+export async function POST(
+  request: Request,
+) {
+  const authenticated =
+    await isAdminAuthenticated();
+
+  if (!authenticated) {
+    return unauthorizedResponse();
   }
 
   let body: ContactBody;
@@ -128,7 +141,8 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       {
-        message: "البيانات المرسلة غير صالحة.",
+        message:
+          "البيانات المرسلة غير صالحة.",
       },
       {
         status: 400,
@@ -147,13 +161,11 @@ export async function POST(request: Request) {
       ? body.city_slug.trim()
       : "";
 
-  // الصندوق الثاني محفوظ في phone_number
   const boxTwoValue =
     typeof body.phone_number === "string"
       ? body.phone_number.trim()
       : "";
 
-  // الصندوق الأول محفوظ في whatsapp_number
   const boxOneValue =
     typeof body.whatsapp_number === "string"
       ? body.whatsapp_number.trim()
@@ -232,35 +244,38 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data, error } = await getSupabaseAdmin()
-    .from("service_contacts")
-    .upsert(
-      {
-        service_slug: serviceSlug,
-        city_slug: citySlug,
-        phone_number: boxTwoValue,
-        whatsapp_number: boxOneValue,
-        google_maps_url: googleMapsUrl,
-        is_active: isActive,
-      },
-      {
-        onConflict: "service_slug,city_slug",
-      },
-    )
-    .select(
-      `
-        id,
-        service_slug,
-        city_slug,
-        phone_number,
-        whatsapp_number,
-        google_maps_url,
-        is_active,
-        created_at,
-        updated_at
-      `,
-    )
-    .single();
+  const { data, error } =
+    await getSupabaseAdmin()
+      .from("service_contacts")
+      .upsert(
+        {
+          service_slug: serviceSlug,
+          city_slug: citySlug,
+          phone_number: boxTwoValue,
+          whatsapp_number: boxOneValue,
+          google_maps_url:
+            googleMapsUrl,
+          is_active: isActive,
+        },
+        {
+          onConflict:
+            "service_slug,city_slug",
+        },
+      )
+      .select(
+        `
+          id,
+          service_slug,
+          city_slug,
+          phone_number,
+          whatsapp_number,
+          google_maps_url,
+          is_active,
+          created_at,
+          updated_at
+        `,
+      )
+      .single();
 
   if (error) {
     console.error(
@@ -270,7 +285,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       {
-        message: "تعذر حفظ بيانات الخدمة.",
+        message:
+          "تعذر حفظ بيانات الخدمة.",
       },
       {
         status: 500,

@@ -27,6 +27,9 @@ type RevealProps = {
   delay?: number;
 };
 
+// ضع رقم الواتساب هنا بدون + أو مسافات
+const WHATSAPP_NUMBER = "9665XXXXXXXX";
+
 const services: Service[] = [
   {
     id: "plumbing",
@@ -92,8 +95,9 @@ const features = [
   },
 ];
 
-
 export default function HomePage() {
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}`;
+
   return (
     <div
       dir="rtl"
@@ -230,70 +234,7 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-
       </main>
-
-      <footer className="border-t border-white/10 bg-[#020d1a] px-4 pb-7 pt-10">
-        <div className="mx-auto max-w-6xl text-center">
-          <h2 className="text-2xl font-black text-[#e8ad45]">المملكة</h2>
-          <p className="mt-1 font-bold">للخدمات المنزلية</p>
-
-
-          <div className="mt-6 flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm text-white/60">
-            <a href="/privacy" className="transition hover:text-white">
-              سياسة الخصوصية
-            </a>
-            <a href="/terms" className="transition hover:text-white">
-              الشروط والأحكام
-            </a>
-            <a href="/usage-policy" className="transition hover:text-white">
-              سياسة الاستخدام
-            </a>
-            <a href="/support" className="transition hover:text-white">
-              الدعم الفني
-            </a>
-          </div>
-
-          <div className="mt-8 border-t border-white/10 pt-6 text-xs leading-6 text-white/40">
-            © 2026 المملكة للخدمات المنزلية. جميع الحقوق محفوظة.
-          </div>
-        </div>
-      </footer>
-
-      {/* زر واتساب خاص بالصفحة الرئيسية — بنفس فكرة الزر الصغير أسفل الشاشة */}
-      <a
-        href="https://wa.me/966598863130"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="تواصل معنا عبر واتساب"
-        title="تواصل معنا عبر واتساب"
-        className="home-whatsapp group fixed bottom-5 right-4 z-[80] flex items-center gap-2 sm:bottom-6 sm:right-6"
-      >
-        <span className="rounded-2xl border border-white/10 bg-[#071a31]/95 px-4 py-3 text-sm font-black text-white shadow-[0_12px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#25D366]/40 group-hover:bg-[#0a2341] sm:px-5 sm:text-base">
-          تواصل معنا
-        </span>
-
-        <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_30px_rgba(37,211,102,0.35)] transition duration-300 group-hover:scale-110 group-active:scale-95 sm:h-14 sm:w-14">
-          <span className="absolute inset-0 rounded-full border-2 border-[#25D366] opacity-0 transition duration-300 group-hover:scale-125 group-hover:opacity-30" />
-          <svg
-            width="25"
-            height="25"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-            className="relative"
-          >
-            <path d="M12.04 2a9.83 9.83 0 0 0-8.45 14.84L2 22l5.31-1.54A9.96 9.96 0 1 0 12.04 2Zm0 17.98a8.03 8.03 0 0 1-4.09-1.12l-.29-.17-3.15.91.93-3.06-.19-.31a7.94 7.94 0 1 1 6.79 3.75Zm4.4-5.96c-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.19-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.4-.54-.41h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.69 2.58 4.1 3.62.57.25 1.02.39 1.37.5.58.18 1.1.16 1.51.1.46-.07 1.43-.58 1.63-1.15.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28Z" />
-          </svg>
-        </span>
-      </a>
-
-      <style>{`
-        /* الصفحة الرئيسية تستخدم زر واتساب خاصًا بها أسفل الشاشة */
-        .whatsapp-float {
-          display: none !important;
-        }
-      `}</style>
     </div>
   );
 }
@@ -303,17 +244,15 @@ function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
+
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
   const [openRegion, setOpenRegion] = useState<string | null>(null);
   const [openCity, setOpenCity] = useState<string | null>(null);
-  const [adminOpen, setAdminOpen] = useState(false);
-  const [adminCode, setAdminCode] = useState("");
-  const [adminMessage, setAdminMessage] = useState("");
-  const [adminLoading, setAdminLoading] = useState(false);
-  const adminInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 30);
+
     window.addEventListener("scroll", handleScroll);
     handleScroll();
 
@@ -321,13 +260,12 @@ function Header() {
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow =
-      menuOpen || adminOpen ? "hidden" : "";
+    document.body.style.overflow = menuOpen ? "hidden" : "";
 
     return () => {
       document.body.style.overflow = "";
     };
-  }, [menuOpen, adminOpen]);
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -339,86 +277,24 @@ function Header() {
     return () => window.clearTimeout(timer);
   }, [searchOpen]);
 
-  useEffect(() => {
-    if (!adminOpen) return;
-
-    const timer = window.setTimeout(() => {
-      adminInputRef.current?.focus();
-    }, 260);
-
-    return () => window.clearTimeout(timer);
-  }, [adminOpen]);
-
   const closeMenu = () => {
     setMenuOpen(false);
     setOpenRegion(null);
     setOpenCity(null);
   };
 
-  const openAdmin = () => {
-    setAdminMessage("");
-    setAdminCode("");
-    setAdminOpen(true);
-  };
-
-  const closeAdmin = () => {
-    if (adminLoading) return;
-
-    setAdminOpen(false);
-    setAdminCode("");
-    setAdminMessage("");
-  };
-
-  const handleAdminSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    if (!adminCode.trim() || adminLoading) return;
-
-    setAdminLoading(true);
-    setAdminMessage("");
-
-    try {
-      const response = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          code: adminCode.trim(),
-        }),
-      });
-
-      const data = (await response.json()) as {
-        ok?: boolean;
-        message?: string;
-      };
-
-      if (!response.ok || !data.ok) {
-        setAdminMessage(
-          data.message ?? "رمز الإدارة غير صحيح.",
-        );
-        return;
-      }
-
-      window.location.replace("/admin");
-    } catch {
-      setAdminMessage(
-        "تعذر الاتصال بالموقع. حاول مرة أخرى.",
-      );
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
   const toggleRegion = (regionName: string) => {
-    setOpenRegion((current) => (current === regionName ? null : regionName));
+    setOpenRegion((current) =>
+      current === regionName ? null : regionName,
+    );
+
     setOpenCity(null);
   };
 
   const toggleCity = (cityName: string) => {
-    setOpenCity((current) => (current === cityName ? null : cityName));
+    setOpenCity((current) =>
+      current === cityName ? null : cityName,
+    );
   };
 
   const normalizedSearch = normalizeArabic(searchQuery);
@@ -450,7 +326,10 @@ function Header() {
     window.setTimeout(() => {
       document
         .getElementById(`menu-city-${citySlug}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
     }, 380);
   };
 
@@ -487,6 +366,7 @@ function Header() {
               >
                 المملكة
               </span>
+
               <span className="mt-1 block text-xs font-extrabold text-white">
                 للخدمات المنزلية
               </span>
@@ -516,12 +396,15 @@ function Header() {
                 ref={searchInputRef}
                 type="search"
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) =>
+                  setSearchQuery(event.target.value)
+                }
                 aria-label="البحث عن مدينة"
                 placeholder="اكتب اسم المدينة..."
                 autoComplete="off"
                 className="h-12 w-full rounded-xl border border-white/15 bg-[#031225] px-4 pl-12 text-right text-sm text-white outline-none transition placeholder:text-white/35 focus:border-[#e8ad45]"
               />
+
               <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#e8ad45]">
                 <SearchIcon size={20} />
               </span>
@@ -548,6 +431,7 @@ function Header() {
                           <span className="block text-sm font-black text-white">
                             {city.name}
                           </span>
+
                           <span className="mt-1 block text-xs text-white/45">
                             {city.regionName}
                           </span>
@@ -574,117 +458,6 @@ function Header() {
 
       <button
         type="button"
-        onClick={openAdmin}
-        aria-label="فتح إعدادات الإدارة"
-        title="إعدادات الإدارة"
-        className="group fixed bottom-5 left-5 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[#e8ad45]/35 bg-[#071a31]/95 text-[#e8ad45] shadow-[0_12px_35px_rgba(0,0,0,0.35)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#e8ad45]/80 hover:bg-[#0a2341] active:scale-95"
-      >
-        <span
-          className={`transition-all duration-500 ease-out ${
-            adminOpen
-              ? "rotate-180 scale-110"
-              : "rotate-0 group-hover:rotate-90 group-hover:scale-110"
-          }`}
-        >
-          <SettingsIcon />
-        </span>
-      </button>
-
-      <div
-        dir="rtl"
-        role="dialog"
-        aria-modal="true"
-        aria-label="دخول الإدارة"
-        className={`fixed inset-0 z-[90] flex items-center justify-center px-4 transition-all duration-300 ${
-          adminOpen
-            ? "pointer-events-auto bg-black/75 opacity-100 backdrop-blur-md"
-            : "pointer-events-none bg-black/0 opacity-0 backdrop-blur-0"
-        }`}
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            closeAdmin();
-          }
-        }}
-      >
-        <section
-          className={`relative w-full max-w-md overflow-hidden rounded-[30px] border border-white/10 bg-[#071a31] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.55)] transition-all duration-500 ease-out sm:p-8 ${
-            adminOpen
-              ? "translate-y-0 scale-100 rotate-0 opacity-100"
-              : "translate-y-10 scale-90 -rotate-2 opacity-0"
-          }`}
-        >
-          <div className="absolute -left-16 -top-16 h-40 w-40 rounded-full bg-[#e8ad45]/10 blur-3xl" />
-          <div className="absolute -bottom-20 -right-16 h-44 w-44 rounded-full bg-[#17416f]/30 blur-3xl" />
-
-          <button
-            type="button"
-            onClick={closeAdmin}
-            disabled={adminLoading}
-            aria-label="إغلاق دخول الإدارة"
-            className="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white active:scale-95 disabled:opacity-40"
-          >
-            <CloseIcon />
-          </button>
-
-          <div className="relative text-center">
-            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#e8ad45]/30 bg-[#e8ad45]/10 text-[#e8ad45] shadow-[0_12px_35px_rgba(232,173,69,0.12)]">
-              <SettingsIcon size={31} />
-            </span>
-
-            <p className="mt-5 text-sm font-bold text-[#e8ad45]">
-              المملكة للخدمات المنزلية
-            </p>
-
-            <h2 className="mt-2 text-2xl font-black">
-              دخول لوحة الإدارة
-            </h2>
-
-            <p className="mt-3 text-sm leading-7 text-white/50">
-              أدخل رمز الإدارة للانتقال إلى لوحة التحكم.
-            </p>
-
-            <form
-              onSubmit={handleAdminSubmit}
-              className="mt-7 space-y-4"
-            >
-              <input
-                ref={adminInputRef}
-                type="password"
-                value={adminCode}
-                onChange={(event) =>
-                  setAdminCode(event.target.value)
-                }
-                autoComplete="current-password"
-                placeholder="رمز الإدارة"
-                aria-label="رمز الإدارة"
-                className="h-14 w-full rounded-2xl border border-white/15 bg-[#031225] px-4 text-center text-lg tracking-[0.16em] text-white outline-none transition placeholder:tracking-normal placeholder:text-white/30 focus:border-[#e8ad45] focus:shadow-[0_0_0_4px_rgba(232,173,69,0.08)]"
-              />
-
-              {adminMessage && (
-                <p
-                  role="alert"
-                  className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200"
-                >
-                  {adminMessage}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={adminLoading || !adminCode.trim()}
-                className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#e8ad45] px-5 font-black text-[#031225] shadow-[0_12px_30px_rgba(232,173,69,0.2)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_38px_rgba(232,173,69,0.28)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {adminLoading
-                  ? "جاري التحقق..."
-                  : "فتح لوحة الإدارة"}
-              </button>
-            </form>
-          </div>
-        </section>
-      </div>
-
-      <button
-        type="button"
         aria-label="إغلاق القائمة"
         onClick={closeMenu}
         className={`fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${
@@ -706,6 +479,7 @@ function Header() {
               <p className="text-3xl font-black tracking-[-0.04em] text-[#e8ad45]">
                 المملكة
               </p>
+
               <p className="mt-1 text-sm font-extrabold text-white">
                 للخدمات المنزلية
               </p>
@@ -866,7 +640,9 @@ function Reveal({
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
       className={`${className} transition-all duration-700 ease-out ${
-        visible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+        visible
+          ? "translate-y-0 opacity-100"
+          : "translate-y-8 opacity-0"
       }`}
     >
       {children}
@@ -892,24 +668,43 @@ function normalizeArabic(value: string) {
     .replace(/ئ/g, "ي");
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="shrink-0"
+      aria-hidden="true"
+    >
+      <path d="M20.5 11.1a8.5 8.5 0 0 1-12.7 7.4L4 20l1.5-3.6A8.5 8.5 0 1 1 20.5 11.1Z" />
+      <path d="M8.8 8.3c.2-.4.4-.4.7-.4h.5c.2 0 .4.1.5.4l.7 1.7c.1.2.1.4-.1.6l-.6.7c.5 1 1.3 1.8 2.3 2.3l.7-.6c.2-.2.4-.2.6-.1l1.7.7c.3.1.4.3.4.5v.5c0 .3 0 .5-.4.7-.4.2-1.1.4-1.6.2-1.1-.3-2.3-1-3.3-2s-1.7-2.2-2-3.3c-.2-.5 0-1.2.2-1.7Z" />
+    </svg>
+  );
+}
+
 function MenuIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    >
       <path d="M4 6h16M4 12h16M4 18h16" />
     </svg>
   );
 }
 
 function SearchIcon({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-4-4" />
-    </svg>
-  );
-}
-
-function SettingsIcon({ size = 27 }: { size?: number }) {
   return (
     <svg
       width={size}
@@ -919,18 +714,24 @@ function SettingsIcon({ size = 27 }: { size?: number }) {
       stroke="currentColor"
       strokeWidth="1.8"
       strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
     >
-      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
-      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.1-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.5 4.65a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.36.35.7.6 1 .29.3.68.45 1.1.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.6Z" />
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
     </svg>
   );
 }
 
 function CloseIcon() {
   return (
-    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <svg
+      width="25"
+      height="25"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    >
       <path d="M6 6l12 12M18 6 6 18" />
     </svg>
   );
@@ -938,7 +739,15 @@ function CloseIcon() {
 
 function ChevronIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <path d="m6 9 6 6 6-6" />
     </svg>
   );
@@ -946,7 +755,16 @@ function ChevronIcon({ size = 22 }: { size?: number }) {
 
 function FaucetIcon() {
   return (
-    <svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="56"
+      height="56"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 29h34c7 0 10 5 10 11v4H45v-3c0-2-1-3-4-3H12Z" />
       <path d="M25 29V18h15v11M20 18h25M32 11v7" />
       <path d="M55 49c0 4-3 7-7 7s-7-3-7-7c0-3 7-11 7-11s7 8 7 11Z" />
@@ -956,7 +774,16 @@ function FaucetIcon() {
 
 function BoltIcon() {
   return (
-    <svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="56"
+      height="56"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M36 5 15 36h15l-3 23 22-33H34Z" />
     </svg>
   );
@@ -964,7 +791,16 @@ function BoltIcon() {
 
 function PaintIcon() {
   return (
-    <svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="56"
+      height="56"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="10" y="11" width="39" height="15" rx="4" />
       <path d="M49 18h7v14H33v9" />
       <rect x="28" y="40" width="10" height="19" rx="3" />
@@ -975,7 +811,16 @@ function PaintIcon() {
 
 function TilesIcon() {
   return (
-    <svg width="56" height="56" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="56"
+      height="56"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="7" y="7" width="22" height="22" rx="2" />
       <rect x="35" y="7" width="22" height="22" rx="2" />
       <rect x="7" y="35" width="22" height="22" rx="2" />

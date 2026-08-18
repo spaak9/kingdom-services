@@ -9,65 +9,41 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type LoginBody = {
-  code?: unknown;
-};
-
 export async function POST(request: Request) {
-  let body: LoginBody;
-
   try {
-    body = (await request.json()) as LoginBody;
-  } catch {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "البيانات المرسلة غير صالحة.",
-      },
-      {
-        status: 400,
-      },
-    );
-  }
+    const body = await request.json();
 
-  const code =
-    typeof body.code === "string"
-      ? body.code.trim()
-      : "";
+    const code =
+      typeof body.code === "string"
+        ? body.code.trim()
+        : "";
 
-  if (!code) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "اكتب رمز الإدارة.",
-      },
-      {
-        status: 400,
-      },
-    );
-  }
+    if (!code) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "اكتب رمز الدخول.",
+        },
+        { status: 400 },
+      );
+    }
 
-  if (!isCorrectAdminCode(code)) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "رمز الإدارة غير صحيح.",
-      },
-      {
-        status: 401,
-      },
-    );
-  }
+    if (!isCorrectAdminCode(code)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "رمز الدخول غير صحيح.",
+        },
+        { status: 401 },
+      );
+    }
 
-  try {
     const response = NextResponse.json(
       {
         ok: true,
         message: "تم تسجيل الدخول بنجاح.",
       },
-      {
-        status: 200,
-      },
+      { status: 200 },
     );
 
     response.cookies.set(
@@ -83,11 +59,9 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message: "إعدادات رمز الإدارة غير موجودة.",
+        message: "حدث خطأ أثناء تسجيل الدخول.",
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }
