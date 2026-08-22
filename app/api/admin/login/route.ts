@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import {
   ADMIN_COOKIE_NAME,
   createAdminSessionToken,
@@ -24,7 +25,13 @@ export async function POST(request: Request) {
           ok: false,
           message: "اكتب رمز الدخول.",
         },
-        { status: 400 },
+        {
+          status: 400,
+          headers: {
+            "Cache-Control":
+              "no-store, no-cache, must-revalidate, private",
+          },
+        },
       );
     }
 
@@ -34,7 +41,13 @@ export async function POST(request: Request) {
           ok: false,
           message: "رمز الدخول غير صحيح.",
         },
-        { status: 401 },
+        {
+          status: 401,
+          headers: {
+            "Cache-Control":
+              "no-store, no-cache, must-revalidate, private",
+          },
+        },
       );
     }
 
@@ -43,7 +56,14 @@ export async function POST(request: Request) {
         ok: true,
         message: "تم تسجيل الدخول بنجاح.",
       },
-      { status: 200 },
+      {
+        status: 200,
+      },
+    );
+
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, private",
     );
 
     response.cookies.set(
@@ -54,14 +74,24 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
-    console.error("Admin login error:", error);
+    console.error(
+      "Admin login error:",
+      error,
+    );
 
     return NextResponse.json(
       {
         ok: false,
-        message: "حدث خطأ أثناء تسجيل الدخول.",
+        message:
+          "حدث خطأ أثناء تسجيل الدخول.",
       },
-      { status: 500 },
+      {
+        status: 500,
+        headers: {
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, private",
+        },
+      },
     );
   }
 }
