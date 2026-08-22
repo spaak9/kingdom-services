@@ -1,14 +1,17 @@
 import { cookies } from "next/headers";
 import {
   createHmac,
+  randomBytes,
   randomUUID,
+  scryptSync,
   timingSafeEqual,
 } from "node:crypto";
+
+import { getSupabaseAdmin } from "./supabase-admin";
 
 export const ADMIN_COOKIE_NAME =
   "kingdom_admin_session_v3";
 
-// مدة الجلسة: ساعة واحدة
 export const ADMIN_SESSION_SECONDS = 60 * 60;
 
 function getAdminCode() {
@@ -28,14 +31,94 @@ function getSessionSecret() {
   return secret;
 }
 
-export function isCorrectAdminCode(code: string) {
-  const adminCode = getAdminCode();
+function safeEqualHex(a: string, b: string) {
+  try {
+    const aBuffer = Buffer.from(a, "hex");
+    const bBuffer = Buffer.from(b, "hex");
 
-  if (!adminCode || !code) {
+    if (
+      aBuffer.length === 0 ||
+      aBuffer.length !== bBuffer.length
+    ) {
+      return false;
+    }
+
+    return timingSafeEqual(aBuffer, bBuffer);
+  } catch {
+    return false;
+  }
+}
+
+function hashCode(code: string, salt: string) {
+  return scryptSync(code, salt, 64).toString("hex");
+}
+
+export function createAdminCodeHash(code: string) {
+  const salt = randomBytes(16).toString("hex");
+
+  return {
+    salt,
+    hash: hashCode(code, salt),
+  };
+}
+
+export async function isCorrectAdminCode(
+  code: string,
+) {
+  const normalizedCode = code.trim();
+
+  if (!normalizedCode) {
     return false;
   }
 
-  return code.trim() === adminCode;
+  try {
+    const { data, error } =
+      await getSupabaseAdmin()
+        .from("site_settings")
+        .select(
+          "admin_code_hash, admin_code_salt",
+        )
+        .eq("id", 1)
+        .maybeSingle();
+
+    if (error) {
+      console.error(
+        "Failed to read admin code settings:",
+        error,
+      );
+      return false;
+    }
+
+    if (
+      data?.admin_code_hash &&
+      data?.admin_code_salt
+    ) {
+      const candidateHash = hashCode(
+        normalizedCode,
+        data.admin_code_salt,
+      );
+
+      return safeEqualHex(
+        candidateHash,
+        data.admin_code_hash,
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Admin code verification error:",
+      error,
+    );
+    return false;
+  }
+
+  // أول مرة فقط قبل حفظ رمز من لوحة الإدارة.
+  const fallbackCode = getAdminCode();
+
+  if (!fallbackCode) {
+    return false;
+  }
+
+  return normalizedCode === fallbackCode;
 }
 
 export function createAdminSessionToken() {
@@ -98,26 +181,9 @@ function verifyAdminSessionToken(token: string) {
       .update(payload)
       .digest("hex");
 
-    const suppliedBuffer = Buffer.from(
+    return safeEqualHex(
       signature,
-      "hex",
-    );
-
-    const expectedBuffer = Buffer.from(
       expectedSignature,
-      "hex",
-    );
-
-    if (
-      suppliedBuffer.length !==
-      expectedBuffer.length
-    ) {
-      return false;
-    }
-
-    return timingSafeEqual(
-      suppliedBuffer,
-      expectedBuffer,
     );
   } catch {
     return false;

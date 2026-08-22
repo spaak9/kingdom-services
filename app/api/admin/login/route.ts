@@ -27,7 +27,6 @@ function createEntryTicket(
     );
   }
 
-  // تصريح فتح لوحة الإدارة لمدة دقيقة فقط
   const expiresAt = Date.now() + 60_000;
   const nonce = randomUUID();
 
@@ -71,7 +70,7 @@ export async function POST(
       );
     }
 
-    if (!isCorrectAdminCode(code)) {
+    if (!(await isCorrectAdminCode(code))) {
       return NextResponse.json(
         {
           ok: false,

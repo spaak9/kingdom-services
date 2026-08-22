@@ -82,6 +82,28 @@ export default function AdminPage() {
     "success" | "error" | ""
   >("");
 
+  const [siteWhatsApp, setSiteWhatsApp] =
+    useState("966598863130");
+  const [siteSaving, setSiteSaving] =
+    useState(false);
+  const [siteMessage, setSiteMessage] =
+    useState("");
+  const [siteMessageType, setSiteMessageType] =
+    useState<"success" | "error" | "">("");
+
+  const [currentAdminCode, setCurrentAdminCode] =
+    useState("");
+  const [newAdminCode, setNewAdminCode] =
+    useState("");
+  const [confirmAdminCode, setConfirmAdminCode] =
+    useState("");
+  const [passwordSaving, setPasswordSaving] =
+    useState(false);
+  const [passwordMessage, setPasswordMessage] =
+    useState("");
+  const [passwordMessageType, setPasswordMessageType] =
+    useState<"success" | "error" | "">("");
+
   const selectedContact = useMemo(() => {
     return contacts.find(
       (contact) =>
@@ -145,6 +167,42 @@ export default function AdminPage() {
   useEffect(() => {
     void loadContacts();
   }, [loadContacts]);
+
+  useEffect(() => {
+    async function loadSiteSettings() {
+      try {
+        const response = await fetch(
+          "/api/site-settings",
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const result =
+          (await response.json()) as {
+            whatsapp_number?: string;
+          };
+
+        if (result.whatsapp_number) {
+          setSiteWhatsApp(
+            result.whatsapp_number,
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load site settings:",
+          error,
+        );
+      }
+    }
+
+    void loadSiteSettings();
+  }, []);
 
   useEffect(() => {
     if (selectedContact) {
@@ -276,6 +334,142 @@ export default function AdminPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveSiteSettings(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    setSiteSaving(true);
+    setSiteMessage("");
+    setSiteMessageType("");
+
+    try {
+      const response = await fetch(
+        "/api/site-settings",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            whatsapp_number: siteWhatsApp,
+          }),
+        },
+      );
+
+      const result =
+        (await response.json()) as {
+          ok?: boolean;
+          message?: string;
+          whatsapp_number?: string;
+        };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(
+          result.message ||
+            "تعذر تحديث رقم الواتساب.",
+        );
+      }
+
+      if (result.whatsapp_number) {
+        setSiteWhatsApp(
+          result.whatsapp_number,
+        );
+      }
+
+      setSiteMessageType("success");
+      setSiteMessage(
+        result.message ||
+          "تم تحديث رقم الواتساب.",
+      );
+    } catch (error) {
+      setSiteMessageType("error");
+      setSiteMessage(
+        error instanceof Error
+          ? error.message
+          : "حدث خطأ أثناء تحديث رقم الواتساب.",
+      );
+    } finally {
+      setSiteSaving(false);
+    }
+  }
+
+  async function changeAdminPassword(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    setPasswordMessage("");
+    setPasswordMessageType("");
+
+    if (newAdminCode !== confirmAdminCode) {
+      setPasswordMessageType("error");
+      setPasswordMessage(
+        "الرمز الجديد وتأكيد الرمز غير متطابقين.",
+      );
+      return;
+    }
+
+    setPasswordSaving(true);
+
+    try {
+      const response = await fetch(
+        "/api/admin/change-code",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            current_code: currentAdminCode,
+            new_code: newAdminCode,
+            confirm_code: confirmAdminCode,
+          }),
+        },
+      );
+
+      const result =
+        (await response.json()) as {
+          ok?: boolean;
+          message?: string;
+        };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(
+          result.message ||
+            "تعذر تغيير رمز الإدارة.",
+        );
+      }
+
+      setPasswordMessageType("success");
+      setPasswordMessage(
+        result.message ||
+          "تم تغيير رمز الإدارة.",
+      );
+
+      setCurrentAdminCode("");
+      setNewAdminCode("");
+      setConfirmAdminCode("");
+
+      window.setTimeout(() => {
+        window.location.replace(
+          "/admin-login",
+        );
+      }, 700);
+    } catch (error) {
+      setPasswordMessageType("error");
+      setPasswordMessage(
+        error instanceof Error
+          ? error.message
+          : "حدث خطأ أثناء تغيير رمز الإدارة.",
+      );
+    } finally {
+      setPasswordSaving(false);
     }
   }
 
@@ -622,6 +816,151 @@ export default function AdminPage() {
             </button>
           </div>
         </form>
+
+        {/* General site settings */}
+        <section className="mt-6 grid gap-6 lg:grid-cols-2">
+          <form
+            onSubmit={saveSiteSettings}
+            className="rounded-3xl border border-white/10 bg-[#071a31] p-5 shadow-2xl sm:p-6"
+          >
+            <p className="text-sm font-bold text-[#e8ad45]">
+              إعدادات الموقع
+            </p>
+
+            <h2 className="mt-2 text-xl font-black">
+              رقم واتساب الموقع
+            </h2>
+
+            <p className="mt-2 text-sm leading-7 text-white/50">
+              هذا الرقم يستخدم في زر واتساب العام بالموقع.
+            </p>
+
+            <label className="mt-5 block">
+              <span className="mb-2 block text-sm font-bold text-white/75">
+                رقم الواتساب
+              </span>
+
+              <input
+                type="tel"
+                value={siteWhatsApp}
+                onChange={(event) =>
+                  setSiteWhatsApp(
+                    event.target.value,
+                  )
+                }
+                dir="ltr"
+                inputMode="tel"
+                placeholder="9665XXXXXXXX"
+                className="h-12 w-full rounded-xl border border-white/15 bg-[#031225] px-4 text-left text-sm text-white outline-none transition placeholder:text-white/30 focus:border-[#e8ad45]"
+              />
+            </label>
+
+            {siteMessage && (
+              <div
+                className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-bold ${
+                  siteMessageType === "success"
+                    ? "border-green-400/30 bg-green-400/10 text-green-300"
+                    : "border-red-400/30 bg-red-400/10 text-red-300"
+                }`}
+              >
+                {siteMessage}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={siteSaving}
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-2xl bg-[#25D366] px-5 text-base font-black text-[#031225] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {siteSaving
+                ? "جاري الحفظ..."
+                : "حفظ رقم الواتساب"}
+            </button>
+          </form>
+
+          <form
+            onSubmit={changeAdminPassword}
+            className="rounded-3xl border border-white/10 bg-[#071a31] p-5 shadow-2xl sm:p-6"
+          >
+            <p className="text-sm font-bold text-[#e8ad45]">
+              أمان لوحة الإدارة
+            </p>
+
+            <h2 className="mt-2 text-xl font-black">
+              تغيير رمز الإدارة
+            </h2>
+
+            <p className="mt-2 text-sm leading-7 text-white/50">
+              بعد التغيير سيتم تسجيل خروجك، ثم تدخل بالرمز الجديد.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <input
+                type="password"
+                value={currentAdminCode}
+                onChange={(event) =>
+                  setCurrentAdminCode(
+                    event.target.value,
+                  )
+                }
+                autoComplete="current-password"
+                placeholder="الرمز الحالي"
+                dir="ltr"
+                className="h-12 w-full rounded-xl border border-white/15 bg-[#031225] px-4 text-center text-sm font-bold tracking-widest text-white outline-none transition placeholder:text-white/30 focus:border-[#e8ad45]"
+              />
+
+              <input
+                type="password"
+                value={newAdminCode}
+                onChange={(event) =>
+                  setNewAdminCode(
+                    event.target.value,
+                  )
+                }
+                autoComplete="new-password"
+                placeholder="الرمز الجديد"
+                dir="ltr"
+                className="h-12 w-full rounded-xl border border-white/15 bg-[#031225] px-4 text-center text-sm font-bold tracking-widest text-white outline-none transition placeholder:text-white/30 focus:border-[#e8ad45]"
+              />
+
+              <input
+                type="password"
+                value={confirmAdminCode}
+                onChange={(event) =>
+                  setConfirmAdminCode(
+                    event.target.value,
+                  )
+                }
+                autoComplete="new-password"
+                placeholder="تأكيد الرمز الجديد"
+                dir="ltr"
+                className="h-12 w-full rounded-xl border border-white/15 bg-[#031225] px-4 text-center text-sm font-bold tracking-widest text-white outline-none transition placeholder:text-white/30 focus:border-[#e8ad45]"
+              />
+            </div>
+
+            {passwordMessage && (
+              <div
+                className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-bold ${
+                  passwordMessageType === "success"
+                    ? "border-green-400/30 bg-green-400/10 text-green-300"
+                    : "border-red-400/30 bg-red-400/10 text-red-300"
+                }`}
+              >
+                {passwordMessage}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={passwordSaving}
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-2xl bg-[#e8ad45] px-5 text-base font-black text-[#031225] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {passwordSaving
+                ? "جاري التغيير..."
+                : "تغيير رمز الإدارة"}
+            </button>
+          </form>
+        </section>
       </div>
     </main>
   );

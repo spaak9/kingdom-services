@@ -1,12 +1,54 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+
+const DEFAULT_WHATSAPP_NUMBER = "966598863130";
 
 export default function WhatsAppSection() {
   const pathname = usePathname();
 
+  const [whatsappNumber, setWhatsappNumber] =
+    useState(DEFAULT_WHATSAPP_NUMBER);
+
   const isHomePage = pathname === "/";
-  const isAdminPage = pathname.startsWith("/admin");
+  const isAdminPage =
+    pathname.startsWith("/admin");
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const response = await fetch(
+          "/api/site-settings",
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const result = (await response.json()) as {
+          whatsapp_number?: string;
+        };
+
+        if (result.whatsapp_number) {
+          setWhatsappNumber(
+            result.whatsapp_number,
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load site settings:",
+          error,
+        );
+      }
+    }
+
+    void loadSettings();
+  }, []);
 
   // إخفاء الواتساب بالكامل من لوحة الإدارة
   if (isAdminPage) {
@@ -20,7 +62,7 @@ export default function WhatsAppSection() {
     >
       <div className="mx-auto max-w-6xl">
         <a
-          href="https://wa.me/966598863130"
+          href={`https://wa.me/${whatsappNumber}`}
           target="_blank"
           rel="noopener noreferrer"
           className="group flex min-h-[76px] items-center justify-center gap-4 rounded-3xl border border-[#25D366]/20 bg-[#25D366]/[0.06] px-5 text-center backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#25D366]/40 hover:bg-[#25D366]/[0.10]"
