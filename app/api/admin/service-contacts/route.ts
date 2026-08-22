@@ -64,6 +64,58 @@ function isValidGoogleMapsUrl(value: string) {
   }
 }
 
+function getSafeError(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null
+  ) {
+    const currentError = error as {
+      code?: unknown;
+      message?: unknown;
+      details?: unknown;
+      hint?: unknown;
+    };
+
+    return {
+      code:
+        typeof currentError.code === "string"
+          ? currentError.code
+          : null,
+
+      message:
+        typeof currentError.message === "string"
+          ? currentError.message
+          : "Unknown error",
+
+      details:
+        typeof currentError.details === "string"
+          ? currentError.details
+          : null,
+
+      hint:
+        typeof currentError.hint === "string"
+          ? currentError.hint
+          : null,
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      code: null,
+      message: error.message,
+      details: null,
+      hint: null,
+    };
+  }
+
+  return {
+    code: null,
+    message: "Unknown server error",
+    details: null,
+    hint: null,
+  };
+}
+
 export async function GET() {
   const authenticated =
     await isAdminAuthenticated();
@@ -72,39 +124,73 @@ export async function GET() {
     return unauthorizedResponse();
   }
 
-  const { data, error } =
-    await getSupabaseAdmin()
-      .from("service_contacts")
-      .select(
-        `
-          id,
-          service_slug,
-          city_slug,
-          phone_number,
-          whatsapp_number,
-          google_maps_url,
-          is_active,
-          created_at,
-          updated_at
-        `,
-      )
-      .order("city_slug", {
-        ascending: true,
-      })
-      .order("service_slug", {
-        ascending: true,
-      });
+  try {
+    const { data, error } =
+      await getSupabaseAdmin()
+        .from("service_contacts")
+        .select(
+          `
+            id,
+            service_slug,
+            city_slug,
+            phone_number,
+            whatsapp_number,
+            google_maps_url,
+            is_active,
+            created_at,
+            updated_at
+          `,
+        )
+        .order("city_slug", {
+          ascending: true,
+        })
+        .order("service_slug", {
+          ascending: true,
+        });
 
-  if (error) {
+    if (error) {
+      console.error(
+        "Failed to load service contacts:",
+        error,
+      );
+
+      return NextResponse.json(
+        {
+          message:
+            "تعذر تحميل بيانات الخدمات.",
+
+          supabaseError:
+            getSafeError(error),
+        },
+        {
+          status: 500,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        contacts: data ?? [],
+      },
+      {
+        status: 200,
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
     console.error(
-      "Failed to load service contacts:",
+      "Service contacts GET server error:",
       error,
     );
 
     return NextResponse.json(
       {
         message:
-          "تعذر تحميل بيانات الخدمات.",
+          "حدث خطأ في اتصال قاعدة البيانات.",
+
+        serverError:
+          getSafeError(error),
       },
       {
         status: 500,
@@ -112,16 +198,6 @@ export async function GET() {
       },
     );
   }
-
-  return NextResponse.json(
-    {
-      contacts: data ?? [],
-    },
-    {
-      status: 200,
-      headers: noStoreHeaders(),
-    },
-  );
 }
 
 export async function POST(
@@ -137,7 +213,8 @@ export async function POST(
   let body: ContactBody;
 
   try {
-    body = (await request.json()) as ContactBody;
+    body =
+      (await request.json()) as ContactBody;
   } catch {
     return NextResponse.json(
       {
@@ -231,7 +308,11 @@ export async function POST(
     );
   }
 
-  if (!isValidGoogleMapsUrl(googleMapsUrl)) {
+  if (
+    !isValidGoogleMapsUrl(
+      googleMapsUrl,
+    )
+  ) {
     return NextResponse.json(
       {
         message:
@@ -244,49 +325,85 @@ export async function POST(
     );
   }
 
-  const { data, error } =
-    await getSupabaseAdmin()
-      .from("service_contacts")
-      .upsert(
-        {
-          service_slug: serviceSlug,
-          city_slug: citySlug,
-          phone_number: boxTwoValue,
-          whatsapp_number: boxOneValue,
-          google_maps_url:
-            googleMapsUrl,
-          is_active: isActive,
-        },
-        {
-          onConflict:
-            "service_slug,city_slug",
-        },
-      )
-      .select(
-        `
-          id,
-          service_slug,
-          city_slug,
-          phone_number,
-          whatsapp_number,
-          google_maps_url,
-          is_active,
-          created_at,
-          updated_at
-        `,
-      )
-      .single();
+  try {
+    const { data, error } =
+      await getSupabaseAdmin()
+        .from("service_contacts")
+        .upsert(
+          {
+            service_slug: serviceSlug,
+            city_slug: citySlug,
+            phone_number: boxTwoValue,
+            whatsapp_number: boxOneValue,
+            google_maps_url:
+              googleMapsUrl,
+            is_active: isActive,
+          },
+          {
+            onConflict:
+              "service_slug,city_slug",
+          },
+        )
+        .select(
+          `
+            id,
+            service_slug,
+            city_slug,
+            phone_number,
+            whatsapp_number,
+            google_maps_url,
+            is_active,
+            created_at,
+            updated_at
+          `,
+        )
+        .single();
 
-  if (error) {
+    if (error) {
+      console.error(
+        "Failed to save service contact:",
+        error,
+      );
+
+      return NextResponse.json(
+        {
+          message:
+            "تعذر حفظ بيانات الخدمة.",
+
+          supabaseError:
+            getSafeError(error),
+        },
+        {
+          status: 500,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        message:
+          "تم حفظ البيانات بنجاح.",
+        contact: data,
+      },
+      {
+        status: 200,
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
     console.error(
-      "Failed to save service contact:",
+      "Service contacts POST server error:",
       error,
     );
 
     return NextResponse.json(
       {
         message:
-          "تعذر حفظ بيانات الخدمة.",
+          "حدث خطأ في اتصال قاعدة البيانات.",
+
+        serverError:
+          getSafeError(error),
       },
       {
         status: 500,
@@ -294,15 +411,4 @@ export async function POST(
       },
     );
   }
-
-  return NextResponse.json(
-    {
-      message: "تم حفظ البيانات بنجاح.",
-      contact: data,
-    },
-    {
-      status: 200,
-      headers: noStoreHeaders(),
-    },
-  );
 }
