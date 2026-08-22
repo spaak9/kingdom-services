@@ -1,3 +1,8 @@
+import {
+  createHmac,
+  randomUUID,
+} from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import {
@@ -10,7 +15,38 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+function createEntryTicket(
+  sessionToken: string,
+) {
+  const secret =
+    process.env.ADMIN_SESSION_SECRET?.trim();
+
+  if (!secret) {
+    throw new Error(
+      "ADMIN_SESSION_SECRET is not configured.",
+    );
+  }
+
+  // تصريح فتح لوحة الإدارة لمدة دقيقة فقط
+  const expiresAt = Date.now() + 60_000;
+  const nonce = randomUUID();
+
+  const payload =
+    `${expiresAt}.${nonce}.${sessionToken}`;
+
+  const signature = createHmac(
+    "sha256",
+    secret,
+  )
+    .update(payload)
+    .digest("hex");
+
+  return `${expiresAt}.${nonce}.${signature}`;
+}
+
+export async function POST(
+  request: Request,
+) {
   try {
     const body = await request.json();
 
@@ -39,7 +75,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          message: "رمز الدخول غير صحيح.",
+          message:
+            "رمز الدخول غير صحيح.",
         },
         {
           status: 401,
@@ -51,10 +88,18 @@ export async function POST(request: Request) {
       );
     }
 
+    const sessionToken =
+      createAdminSessionToken();
+
+    const entryTicket =
+      createEntryTicket(sessionToken);
+
     const response = NextResponse.json(
       {
         ok: true,
-        message: "تم تسجيل الدخول بنجاح.",
+        message:
+          "تم تسجيل الدخول بنجاح.",
+        entryTicket,
       },
       {
         status: 200,
@@ -68,7 +113,7 @@ export async function POST(request: Request) {
 
     response.cookies.set(
       ADMIN_COOKIE_NAME,
-      createAdminSessionToken(),
+      sessionToken,
       getAdminCookieOptions(),
     );
 

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useState,
+  type FormEvent,
+} from "react";
 
 export default function AdminLoginPage() {
-  const router = useRouter();
-
   const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] =
+    useState(false);
+  const [message, setMessage] =
+    useState("");
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -31,19 +33,23 @@ export default function AdminLoginPage() {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           credentials: "include",
+          cache: "no-store",
           body: JSON.stringify({
             code: trimmedCode,
           }),
         },
       );
 
-      const result = (await response.json()) as {
-        ok?: boolean;
-        message?: string;
-      };
+      const result =
+        (await response.json()) as {
+          ok?: boolean;
+          message?: string;
+          entryTicket?: string;
+        };
 
       if (!response.ok || !result.ok) {
         setMessage(
@@ -53,8 +59,30 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.replace("/admin");
-      router.refresh();
+      if (!result.entryTicket) {
+        setMessage(
+          "تعذر إنشاء تصريح الدخول.",
+        );
+        return;
+      }
+
+      /*
+       * بعد إدخال الكود الصحيح،
+       * ندخل لوحة الإدارة بتصريح
+       * مؤقت وموقّع من السيرفر.
+       *
+       * بعد فتح لوحة الإدارة،
+       * سيتم حذف التصريح من الرابط.
+       *
+       * لذلك عند فتح /admin مرة ثانية
+       * أو تحديث الصفحة، سيطلب الكود
+       * من جديد حتى على نفس الجهاز.
+       */
+      window.location.replace(
+        `/admin?ticket=${encodeURIComponent(
+          result.entryTicket,
+        )}`,
+      );
     } catch (error) {
       console.error(
         "Admin login error:",
@@ -86,8 +114,8 @@ export default function AdminLoginPage() {
             </h1>
 
             <p className="mt-3 text-sm leading-7 text-white/50">
-              أدخل رمز الدخول للوصول إلى لوحة
-              الإدارة.
+              أدخل رمز الدخول للوصول إلى
+              لوحة الإدارة.
             </p>
           </div>
 
@@ -104,7 +132,9 @@ export default function AdminLoginPage() {
                 type="password"
                 value={code}
                 onChange={(event) =>
-                  setCode(event.target.value)
+                  setCode(
+                    event.target.value,
+                  )
                 }
                 autoComplete="current-password"
                 placeholder="أدخل رمز الإدارة"

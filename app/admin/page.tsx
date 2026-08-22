@@ -50,6 +50,14 @@ const emptyForm: FormData = {
 };
 
 export default function AdminPage() {
+  useEffect(() => {
+    window.history.replaceState(
+      {},
+      "",
+      "/admin",
+    );
+  }, []);
+
   const [activeSection, setActiveSection] =
     useState<AdminSection>("contacts");
 

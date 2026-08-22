@@ -53,7 +53,7 @@ export default function WhatsAppSection() {
             <span className="mt-1 block text-sm text-white/50">
               {isHomePage
                 ? "تواصل معنا مباشرة عبر واتساب"
-                : "احجز خدمتك الآن عبر واتساب"}
+                : "احجز موقعك من هنا"}
             </span>
           </span>
 
