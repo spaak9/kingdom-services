@@ -1,13 +1,19 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { services, isServiceSlug } from '@/data/services';
-import { cities, isCitySlug } from '@/data/cities';
-import { getServiceCityUrl } from '@/utils/url';
+import {
+    services,
+    cities,
+    serviceSlugs,
+    citySlugs,
+    isServiceSlug,
+    isCitySlug,
+    getServiceCityUrl,
+} from '@/app/lib/service-data';
 
 export const dynamicParams = false;
 
 export async function generateStaticParams() {
-    return services.flatMap(service => cities.map(city => ({ service: service.slug, city: city.slug })));
+    return serviceSlugs.flatMap(service => citySlugs.map(city => ({ service, city })));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ service: string; city: string }> }): Promise<Metadata> {

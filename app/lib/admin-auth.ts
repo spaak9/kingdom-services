@@ -86,10 +86,7 @@ export async function isCorrectAdminCode(
         "Failed to read admin code settings:",
         error,
       );
-      return false;
-    }
-
-    if (
+    } else if (
       data?.admin_code_hash &&
       data?.admin_code_salt
     ) {
@@ -104,11 +101,11 @@ export async function isCorrectAdminCode(
       );
     }
   } catch (error) {
+    // مثلاً عندما لا يكون Supabase مهيأً بعد.
     console.error(
       "Admin code verification error:",
       error,
     );
-    return false;
   }
 
   // أول مرة فقط قبل حفظ رمز من لوحة الإدارة.
