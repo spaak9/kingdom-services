@@ -17,7 +17,14 @@ import {
     type ResolvedContact,
 } from '@/app/lib/service-contacts';
 
-export const dynamicParams = false;
+/*
+ * لا نستخدم dynamicParams = false هنا.
+ *
+ * مع إيقافها، أي صفحة يُعاد توليدها بعد revalidatePath تُعامل
+ * كمسار خارج القائمة الثابتة فتعطي 404 بعد أول حفظ من لوحة الإدارة.
+ * الروابط الخاطئة ما زالت تعطي 404 عبر notFound() بالأسفل.
+ */
+export const dynamicParams = true;
 
 // شبكة أمان: تتحدث الصفحة تلقائيًا كل ساعة حتى لو ضاع
 // نداء revalidatePath القادم من لوحة الإدارة.
