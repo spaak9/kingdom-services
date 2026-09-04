@@ -1,13 +1,9 @@
 import { cookies } from "next/headers";
 import {
   createHmac,
-  randomBytes,
   randomUUID,
-  scryptSync,
   timingSafeEqual,
 } from "node:crypto";
-
-import { getSupabaseAdmin } from "./supabase-admin";
 
 export const ADMIN_COOKIE_NAME =
   "kingdom_admin_session_v3";
@@ -49,19 +45,12 @@ function safeEqualHex(a: string, b: string) {
   }
 }
 
-function hashCode(code: string, salt: string) {
-  return scryptSync(code, salt, 64).toString("hex");
-}
-
-export function createAdminCodeHash(code: string) {
-  const salt = randomBytes(16).toString("hex");
-
-  return {
-    salt,
-    hash: hashCode(code, salt),
-  };
-}
-
+/*
+ * رمز الإدارة يأتي من متغير البيئة ADMIN_CODE فقط.
+ *
+ * لا نحفظه في ملف لأن ملفات public/assets مكشوفة للجميع،
+ * ولأن أي ملف خارجها يُمحى مع كل عملية نشر.
+ */
 export async function isCorrectAdminCode(
   code: string,
 ) {
@@ -71,51 +60,32 @@ export async function isCorrectAdminCode(
     return false;
   }
 
-  try {
-    const { data, error } =
-      await getSupabaseAdmin()
-        .from("site_settings")
-        .select(
-          "admin_code_hash, admin_code_salt",
-        )
-        .eq("id", 1)
-        .maybeSingle();
+  const expectedCode = getAdminCode();
 
-    if (error) {
-      console.error(
-        "Failed to read admin code settings:",
-        error,
-      );
-    } else if (
-      data?.admin_code_hash &&
-      data?.admin_code_salt
-    ) {
-      const candidateHash = hashCode(
-        normalizedCode,
-        data.admin_code_salt,
-      );
-
-      return safeEqualHex(
-        candidateHash,
-        data.admin_code_hash,
-      );
-    }
-  } catch (error) {
-    // مثلاً عندما لا يكون Supabase مهيأً بعد.
+  if (!expectedCode) {
     console.error(
-      "Admin code verification error:",
-      error,
+      "ADMIN_CODE is not configured.",
     );
-  }
 
-  // أول مرة فقط قبل حفظ رمز من لوحة الإدارة.
-  const fallbackCode = getAdminCode();
-
-  if (!fallbackCode) {
     return false;
   }
 
-  return normalizedCode === fallbackCode;
+  // مقارنة بزمن ثابت حتى لا يتسرب طول الرمز أو محتواه.
+  const candidate = Buffer.from(
+    normalizedCode,
+    "utf8",
+  );
+
+  const expected = Buffer.from(
+    expectedCode,
+    "utf8",
+  );
+
+  if (candidate.length !== expected.length) {
+    return false;
+  }
+
+  return timingSafeEqual(candidate, expected);
 }
 
 export function createAdminSessionToken() {

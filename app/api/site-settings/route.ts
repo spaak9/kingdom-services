@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { isAdminAuthenticated } from "../../lib/admin-auth";
-import { getSupabaseAdmin } from "../../lib/supabase-admin";
+import {
+  DEFAULT_WHATSAPP_NUMBER,
+  readSiteSettings,
+  writeSiteSettings,
+} from "../../lib/site-settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,36 +27,13 @@ function normalizeWhatsAppNumber(value: string) {
  */
 export async function GET() {
   try {
-    const { data, error } =
-      await getSupabaseAdmin()
-        .from("site_settings")
-        .select("whatsapp_number")
-        .eq("id", 1)
-        .maybeSingle();
-
-    if (error) {
-      console.error(
-        "Failed to load site settings:",
-        error,
-      );
-
-      return NextResponse.json(
-        {
-          whatsapp_number:
-            "966598863130",
-        },
-        {
-          status: 200,
-          headers: noStoreHeaders(),
-        },
-      );
-    }
+    const settings = await readSiteSettings();
 
     return NextResponse.json(
       {
         whatsapp_number:
-          data?.whatsapp_number ||
-          "966598863130",
+          settings.whatsapp_number ||
+          DEFAULT_WHATSAPP_NUMBER,
       },
       {
         status: 200,
@@ -68,7 +49,7 @@ export async function GET() {
     return NextResponse.json(
       {
         whatsapp_number:
-          "966598863130",
+          DEFAULT_WHATSAPP_NUMBER,
       },
       {
         status: 200,
@@ -147,52 +128,14 @@ export async function POST(
       );
     }
 
-    const { data, error } =
-      await getSupabaseAdmin()
-        .from("site_settings")
-        .upsert(
-          {
-            id: 1,
-            whatsapp_number:
-              whatsappNumber,
-            updated_at:
-              new Date().toISOString(),
-          },
-          {
-            onConflict: "id",
-          },
-        )
-        .select(
-          "whatsapp_number",
-        )
-        .single();
-
-    if (error) {
-      console.error(
-        "Failed to save WhatsApp number:",
-        error,
-      );
-
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "تعذر حفظ رقم الواتساب.",
-        },
-        {
-          status: 500,
-          headers: noStoreHeaders(),
-        },
-      );
-    }
+    await writeSiteSettings(whatsappNumber);
 
     return NextResponse.json(
       {
         ok: true,
         message:
           "تم تحديث رقم الواتساب.",
-        whatsapp_number:
-          data.whatsapp_number,
+        whatsapp_number: whatsappNumber,
       },
       {
         status: 200,

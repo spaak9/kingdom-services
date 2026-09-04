@@ -1,9 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { invalidateServiceContacts } from "../../../lib/service-contacts";
+import { readStoredContacts } from "../../../lib/service-contacts";
 import { isAdminAuthenticated } from "../../../lib/admin-auth";
-import { getSupabaseAdmin } from "../../../lib/supabase-admin";
+import {
+  CONTACTS_FILE,
+  writeJsonFile,
+} from "../../../lib/local-store";
 
 import {
   isCitySlug,
@@ -127,53 +130,23 @@ export async function GET() {
   }
 
   try {
-    const { data, error } =
-      await getSupabaseAdmin()
-        .from("service_contacts")
-        .select(
-          `
-            id,
-            service_slug,
-            city_slug,
-            phone_number,
-            whatsapp_number,
-            google_maps_url,
-            is_active,
-            created_at,
-            updated_at
-          `,
-        )
-        .order("city_slug", {
-          ascending: true,
-        })
-        .order("service_slug", {
-          ascending: true,
-        });
+    const stored = await readStoredContacts();
 
-    if (error) {
-      console.error(
-        "Failed to load service contacts:",
-        error,
+    const contacts = [...stored].sort((a, b) => {
+      const byCity = a.city_slug.localeCompare(
+        b.city_slug,
       );
 
-      return NextResponse.json(
-        {
-          message:
-            "تعذر تحميل بيانات الخدمات.",
-
-          supabaseError:
-            getSafeError(error),
-        },
-        {
-          status: 500,
-          headers: noStoreHeaders(),
-        },
-      );
-    }
+      return byCity !== 0
+        ? byCity
+        : a.service_slug.localeCompare(
+            b.service_slug,
+          );
+    });
 
     return NextResponse.json(
       {
-        contacts: data ?? [],
+        contacts,
       },
       {
         status: 200,
@@ -328,65 +301,32 @@ export async function POST(
   }
 
   try {
-    const { data, error } =
-      await getSupabaseAdmin()
-        .from("service_contacts")
-        .upsert(
-          {
-            service_slug: serviceSlug,
-            city_slug: citySlug,
-            phone_number: boxTwoValue,
-            whatsapp_number: boxOneValue,
-            google_maps_url:
-              googleMapsUrl,
-            is_active: isActive,
-          },
-          {
-            onConflict:
-              "service_slug,city_slug",
-          },
-        )
-        .select(
-          `
-            id,
-            service_slug,
-            city_slug,
-            phone_number,
-            whatsapp_number,
-            google_maps_url,
-            is_active,
-            created_at,
-            updated_at
-          `,
-        )
-        .single();
+    const stored = await readStoredContacts();
 
-    if (error) {
-      console.error(
-        "Failed to save service contact:",
-        error,
-      );
+    const data = {
+      service_slug: serviceSlug,
+      city_slug: citySlug,
+      phone_number: boxTwoValue,
+      whatsapp_number: boxOneValue,
+      google_maps_url: googleMapsUrl,
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+    };
 
-      return NextResponse.json(
-        {
-          message:
-            "تعذر حفظ بيانات الخدمة.",
+    // سجل واحد لكل (خدمة + مدينة): نستبدل القديم إن وُجد.
+    const next = stored.filter(
+      (row) =>
+        row.service_slug !== serviceSlug ||
+        row.city_slug !== citySlug,
+    );
 
-          supabaseError:
-            getSafeError(error),
-        },
-        {
-          status: 500,
-          headers: noStoreHeaders(),
-        },
-      );
-    }
+    next.push(data);
+
+    await writeJsonFile(CONTACTS_FILE, next);
 
     // تحديث الصفحة العامة فورًا بعد الحفظ.
     // فشل التحديث لا يجب أن يحوّل عملية حفظ ناجحة إلى خطأ.
     try {
-      invalidateServiceContacts();
-
       revalidatePath(
         `/services/${serviceSlug}/${citySlug}`,
       );

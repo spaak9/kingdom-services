@@ -1,23 +1,28 @@
 import "server-only";
 import { cache } from "react";
 
-import { getSupabaseAdminOrNull } from "./supabase-admin";
+import { CONTACTS_FILE, readJsonFile } from "./local-store";
 
 /*
- * قراءة بيانات المعلنين (service_contacts) للصفحات العامة.
+ * قراءة بيانات المعلنين للصفحات العامة.
  *
  * الصفحات 632 صفحة ثابتة، وكل صفحة تقرأ البيانات مرتين
- * (generateMetadata ثم جسم الصفحة). لذلك نجلب الجدول كاملًا
- * مرة واحدة ونحتفظ به في الذاكرة بدل استعلام لكل صفحة.
+ * (generateMetadata ثم جسم الصفحة). لذلك نقرأ الملف كاملًا
+ * مرة واحدة ونحتفظ به في الذاكرة بدل قراءة لكل صفحة.
  */
 
 export const VACANT_LABEL = "للإيجار";
 
-const MEMO_TTL_MS = 60_000;
-
-// عند فشل الاتصال نخزن نتيجة فارغة لفترة قصيرة حتى لا
-// يحاول البناء الاتصال 632 مرة متتالية.
-const MEMO_ERROR_TTL_MS = 15_000;
+// شكل السجل داخل ملف service-contacts.json
+export type StoredContact = {
+  service_slug: string;
+  city_slug: string;
+  phone_number: string;
+  whatsapp_number: string;
+  google_maps_url: string;
+  is_active: boolean;
+  updated_at: string;
+};
 
 export type ServiceContactRow = {
   serviceSlug: string;
@@ -42,14 +47,6 @@ export type ResolvedContact = {
   whatsapp: ContactValue | null;
   googleMapsUrl: string | null;
 };
-
-type Memo = {
-  map: Map<string, ServiceContactRow>;
-  expiresAt: number;
-};
-
-let memo: Memo | null = null;
-let inFlight: Promise<Map<string, ServiceContactRow>> | null = null;
 
 function contactKey(serviceSlug: string, citySlug: string) {
   return `${serviceSlug}|${citySlug}`;
@@ -133,33 +130,30 @@ function toContactValue(raw: string): ContactValue | null {
   };
 }
 
+export async function readStoredContacts() {
+  const stored = await readJsonFile<StoredContact[]>(
+    CONTACTS_FILE,
+    [],
+  );
+
+  return Array.isArray(stored) ? stored : [];
+}
+
 async function loadServiceContacts() {
-  const supabase = getSupabaseAdminOrNull();
-
-  if (!supabase) {
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from("service_contacts")
-    .select(
-      "service_slug, city_slug, phone_number, whatsapp_number, google_maps_url, is_active",
-    )
-    .eq("is_active", true)
-    .order("updated_at", { ascending: true });
-
-  if (error) {
-    console.warn(
-      "Failed to load service contacts:",
-      error.message,
-    );
-
-    return null;
-  }
+  const stored = await readStoredContacts();
 
   const map = new Map<string, ServiceContactRow>();
 
-  for (const row of data ?? []) {
+  for (const row of stored) {
+    if (!row?.service_slug || !row?.city_slug) {
+      continue;
+    }
+
+    // المخفية تُعامل كصفحة شاغرة.
+    if (row.is_active === false) {
+      continue;
+    }
+
     map.set(
       contactKey(row.service_slug, row.city_slug),
       {
@@ -175,53 +169,29 @@ async function loadServiceContacts() {
   return map;
 }
 
+/*
+ * cache() من React يوحّد القراءة داخل الطلب الواحد، فتقرأ
+ * generateMetadata وجسم الصفحة نفس النتيجة بقراءة واحدة.
+ *
+ * لا نحتفظ بنسخة أطول من ذلك عمدًا: حالة الوحدات لا تُشارَك
+ * بين معالجات الـ API ومكوّنات الخادم، فكان أي تخزين أطول
+ * يُبقي الصفحة على بيانات قديمة بعد الحفظ. وقراءة ملف محلي
+ * رخيصة أصلًا.
+ */
 export const getServiceContacts = cache(
   async (): Promise<Map<string, ServiceContactRow>> => {
-    const now = Date.now();
-
-    if (memo && memo.expiresAt > now) {
-      return memo.map;
-    }
-
-    if (inFlight) {
-      return inFlight;
-    }
-
-    inFlight = (async () => {
-      let map: Map<string, ServiceContactRow> | null = null;
-
-      try {
-        map = await loadServiceContacts();
-      } catch (error) {
-        console.warn(
-          "Service contacts lookup error:",
-          error,
-        );
-      }
-
-      const resolved = map ?? new Map<string, ServiceContactRow>();
-
-      memo = {
-        map: resolved,
-        expiresAt:
-          Date.now() +
-          (map ? MEMO_TTL_MS : MEMO_ERROR_TTL_MS),
-      };
-
-      return resolved;
-    })();
-
     try {
-      return await inFlight;
-    } finally {
-      inFlight = null;
+      return await loadServiceContacts();
+    } catch (error) {
+      console.warn(
+        "Service contacts lookup error:",
+        error,
+      );
+
+      return new Map<string, ServiceContactRow>();
     }
   },
 );
-
-export function invalidateServiceContacts() {
-  memo = null;
-}
 
 export async function getContactFor(
   serviceSlug: string,

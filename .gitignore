@@ -43,3 +43,7 @@ next-env.d.ts
 .vercel
 
 kingdom-services.zip
+
+# بيانات المعلنين تُكتب أثناء التشغيل ولا تُرفع مع الكود
+public/assets/service-contacts.json
+public/assets/site-settings.json

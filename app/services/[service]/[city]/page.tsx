@@ -8,6 +8,7 @@ import {
     isServiceSlug,
     isCitySlug,
     getServiceCityUrl,
+    WHATSAPP_NUMBER,
 } from '@/app/lib/service-data';
 import {
     getContactFor,
@@ -52,7 +53,9 @@ export async function generateMetadata({ params }: { params: Promise<{ service: 
 }
 
 function ContactBox({ label, value, href }: { label: string; value: ContactValue | null; href: string | null }) {
-    const text = value?.raw ?? VACANT_LABEL;
+    if (!value) {
+        return null;
+    }
 
     return (
         <div className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
@@ -65,12 +68,36 @@ function ContactBox({ label, value, href }: { label: string; value: ContactValue
                     dir="ltr"
                     className="text-xl font-bold text-[#e8ad45] underline-offset-4 hover:underline"
                 >
-                    {text}
+                    {value.raw}
                 </a>
             ) : (
-                <span dir="ltr" className="text-xl font-bold">{text}</span>
+                <span dir="ltr" className="text-xl font-bold">{value.raw}</span>
             )}
         </div>
+    );
+}
+
+/*
+ * الصفحة الشاغرة: دعوة لاستئجار المكان عبر واتساب الموقع.
+ */
+function RentThisPage() {
+    return (
+        <section className="rounded-3xl border border-[#25D366]/20 bg-[#25D366]/[0.06] px-6 py-8 text-center">
+            <p className="text-xl font-black">هل تريد أن يظهر رقمك هنا؟</p>
+            <p className="mt-2 text-white/60">
+                هذا المكان متاح {VACANT_LABEL}. تواصل معنا عبر واتساب لحجزه.
+            </p>
+
+            <a
+                href={`https://wa.me/${WHATSAPP_NUMBER}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-[#25D366]/10 px-6 py-3 text-base font-black text-[#25D366] transition duration-300 hover:bg-[#25D366]/20"
+            >
+                تواصل عبر واتساب
+                <span dir="ltr">{WHATSAPP_NUMBER}</span>
+            </a>
+        </section>
     );
 }
 
@@ -122,29 +149,35 @@ export default async function ServiceCityPage({ params }: { params: Promise<{ se
             <h1 className="mb-4 text-3xl font-bold">{service.name} في {city.name}</h1>
             <p className="mb-6 text-lg text-white/70">{service.intro}</p>
 
-            <section className="grid gap-4 sm:grid-cols-2">
-                <ContactBox
-                    label="واتساب"
-                    value={contact.whatsapp}
-                    href={contact.whatsapp?.dialable ? `https://wa.me/${contact.whatsapp.dialable}` : null}
-                />
-                <ContactBox
-                    label="اتصال"
-                    value={contact.phone}
-                    href={contact.phone?.dialable ? `tel:+${contact.phone.dialable}` : null}
-                />
-            </section>
+            {contact.isRented ? (
+                <>
+                    <section className="grid gap-4 sm:grid-cols-2">
+                        <ContactBox
+                            label="واتساب"
+                            value={contact.whatsapp}
+                            href={contact.whatsapp?.dialable ? `https://wa.me/${contact.whatsapp.dialable}` : null}
+                        />
+                        <ContactBox
+                            label="اتصال"
+                            value={contact.phone}
+                            href={contact.phone?.dialable ? `tel:+${contact.phone.dialable}` : null}
+                        />
+                    </section>
 
-            {contact.googleMapsUrl ? (
-                <a
-                    href={contact.googleMapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="mt-4 inline-block text-[#e8ad45] underline-offset-4 hover:underline"
-                >
-                    الموقع على خرائط Google
-                </a>
-            ) : null}
+                    {contact.googleMapsUrl ? (
+                        <a
+                            href={contact.googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="mt-4 inline-block text-[#e8ad45] underline-offset-4 hover:underline"
+                        >
+                            الموقع على خرائط Google
+                        </a>
+                    ) : null}
+                </>
+            ) : (
+                <RentThisPage />
+            )}
 
             <ServiceJsonLd
                 serviceName={service.name}

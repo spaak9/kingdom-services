@@ -15,6 +15,11 @@ export default function WhatsAppSection() {
   const isAdminPage =
     pathname.startsWith("/admin");
 
+  // صفحات الخدمات تعرض رقم المعلن أو دعوة الإيجار بنفسها،
+  // فلا نعرض رقم الموقع بجانبه حتى لا يظهر رقمان.
+  const isServicePage =
+    pathname.startsWith("/services/");
+
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -50,8 +55,8 @@ export default function WhatsAppSection() {
     void loadSettings();
   }, []);
 
-  // إخفاء الواتساب بالكامل من لوحة الإدارة
-  if (isAdminPage) {
+  // إخفاء الواتساب بالكامل من لوحة الإدارة وصفحات الخدمات
+  if (isAdminPage || isServicePage) {
     return null;
   }
 
