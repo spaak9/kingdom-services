@@ -43,7 +43,11 @@ export async function generateMetadata({ params }: { params: Promise<{ service: 
 
     const contact = await getContactFor(service.slug, city.slug);
 
-    const seoTitle = `${service.searchName} ${city.name} ${contact.displayValue} خصم 30% ${service.searchName} ${city.name}`;
+    /*
+     * بلا تكرار: العنوان المكرر ("سباك الحريق ... سباك الحريق")
+     * يدفع Google لإعادة كتابة العنوان وحذف الرقم منه.
+     */
+    const seoTitle = `${service.searchName} ${city.name} ${contact.displayValue} خصم 30%`;
     const description = `${service.intro} ${service.pluralName} في ${city.name}.`;
     const canonical = getServiceCityUrl(service.slug, city.slug);
 
