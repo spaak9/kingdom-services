@@ -41,7 +41,14 @@ export async function generateMetadata({ params }: { params: Promise<{ service: 
      * يدفع Google لإعادة كتابة العنوان وحذف الرقم منه.
      */
     const seoTitle = `${service.searchName} ${city.name} ${contact.displayValue} خصم 30%`;
-    const description = `${service.intro} ${service.pluralName} في ${city.name}.`;
+
+    /*
+     * الرقم في بداية الوصف أيضًا، ليظهر في السطر الرمادي أسفل
+     * العنوان في نتائج البحث لا في العنوان وحده.
+     */
+    const description = contact.isRented
+        ? `${service.searchName} ${city.name} — للتواصل والحجز: ${contact.displayValue}. ${service.intro}`
+        : `${service.pluralName} في ${city.name}. ${service.intro}`;
     const canonical = getServiceCityUrl(service.slug, city.slug);
 
     return {
@@ -150,7 +157,17 @@ export default async function ServiceCityPage({ params }: { params: Promise<{ se
 
     return (
         <main className="container mx-auto px-4 py-8">
-            <h1 className="mb-4 text-3xl font-bold">{service.name} في {city.name}</h1>
+            {/*
+              * العنوان الظاهر يطابق عنوان الصفحة ويحمل الرقم.
+              * عندما يعيد Google كتابة العنوان فإنه يستعين بـ h1،
+              * فبقاء الرقم فيه يرفع فرصة ظهوره في نتائج البحث.
+              */}
+            <h1 className="mb-4 text-3xl font-bold">
+                {service.searchName} {city.name}
+                {contact.isRented ? (
+                    <> <span dir="ltr">{contact.displayValue}</span></>
+                ) : null}
+            </h1>
             <p className="mb-6 text-lg text-white/70">{service.intro}</p>
 
             {contact.isRented ? (
