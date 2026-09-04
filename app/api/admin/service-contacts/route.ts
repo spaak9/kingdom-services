@@ -1,5 +1,7 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { invalidateServiceContacts } from "../../../lib/service-contacts";
 import { isAdminAuthenticated } from "../../../lib/admin-auth";
 import { getSupabaseAdmin } from "../../../lib/supabase-admin";
 
@@ -377,6 +379,21 @@ export async function POST(
           status: 500,
           headers: noStoreHeaders(),
         },
+      );
+    }
+
+    // تحديث الصفحة العامة فورًا بعد الحفظ.
+    // فشل التحديث لا يجب أن يحوّل عملية حفظ ناجحة إلى خطأ.
+    try {
+      invalidateServiceContacts();
+
+      revalidatePath(
+        `/services/${serviceSlug}/${citySlug}`,
+      );
+    } catch (revalidateError) {
+      console.error(
+        "Failed to revalidate service page:",
+        revalidateError,
       );
     }
 

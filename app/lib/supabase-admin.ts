@@ -33,3 +33,26 @@ export function getSupabaseAdmin() {
 
   return supabaseAdminClient;
 }
+
+export function isSupabaseConfigured() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.SUPABASE_SECRET_KEY,
+  );
+}
+
+/*
+ * نسخة لا ترمي خطأ.
+ * الصفحات العامة تُبنى حتى بدون إعداد Supabase.
+ */
+export function getSupabaseAdminOrNull() {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+
+  try {
+    return getSupabaseAdmin();
+  } catch {
+    return null;
+  }
+}

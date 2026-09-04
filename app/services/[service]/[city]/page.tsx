@@ -9,8 +9,18 @@ import {
     isCitySlug,
     getServiceCityUrl,
 } from '@/app/lib/service-data';
+import {
+    getContactFor,
+    VACANT_LABEL,
+    type ContactValue,
+    type ResolvedContact,
+} from '@/app/lib/service-contacts';
 
 export const dynamicParams = false;
+
+// شبكة أمان: تتحدث الصفحة تلقائيًا كل ساعة حتى لو ضاع
+// نداء revalidatePath القادم من لوحة الإدارة.
+export const revalidate = 3600;
 
 export async function generateStaticParams() {
     return serviceSlugs.flatMap(service => citySlugs.map(city => ({ service, city })));
@@ -19,17 +29,19 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ service: string; city: string }> }): Promise<Metadata> {
     const { service: serviceParam, city: cityParam } = await params;
     if (!isServiceSlug(serviceParam) || !isCitySlug(cityParam)) return { title: "الصفحة غير موجودة", robots: { index: false, follow: false } };
-    
+
     const service = services[serviceParam];
     const city = cities[cityParam];
-    
-    const contactInfo = (city as any).phone || "للإيجار";
-    const seoTitle = `${service.name} ${city.name} ${contactInfo} خصم 30% ${service.name} ${city.name}`;
-    const description = `يقدم ${service.name} في ${city.name} مجموعة من الخدمات للعملاء في المنطقة، بما في ذلك الكشف عن أنظمة السباكة وصيانعتها وإصلاحها وخدمات الطوارئ على مدار 24 ساعة.`;
+
+    const contact = await getContactFor(service.slug, city.slug);
+
+    const seoTitle = `${service.searchName} ${city.name} ${contact.displayValue} خصم 30% ${service.searchName} ${city.name}`;
+    const description = `${service.intro} ${service.pluralName} في ${city.name}.`;
     const canonical = getServiceCityUrl(service.slug, city.slug);
 
     return {
-        title: seoTitle,
+        // absolute حتى لا يضيف القالب في layout اسم الموقع بعد الرقم.
+        title: { absolute: seoTitle },
         description,
         keywords: [seoTitle, `${service.searchName} ${city.name}`],
         alternates: { canonical },
@@ -39,18 +51,107 @@ export async function generateMetadata({ params }: { params: Promise<{ service: 
     };
 }
 
+function ContactBox({ label, value, href }: { label: string; value: ContactValue | null; href: string | null }) {
+    const text = value?.raw ?? VACANT_LABEL;
+
+    return (
+        <div className="rounded-xl border border-white/10 bg-white/5 px-5 py-4">
+            <p className="mb-1 text-sm text-white/60">{label}</p>
+            {href ? (
+                <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    dir="ltr"
+                    className="text-xl font-bold text-[#e8ad45] underline-offset-4 hover:underline"
+                >
+                    {text}
+                </a>
+            ) : (
+                <span dir="ltr" className="text-xl font-bold">{text}</span>
+            )}
+        </div>
+    );
+}
+
+function ServiceJsonLd({ serviceName, cityName, canonical, contact }: { serviceName: string; cityName: string; canonical: string; contact: ResolvedContact }) {
+    const telephone = contact.phone?.dialable ?? contact.whatsapp?.dialable;
+
+    // لا نضيف بيانات منظمة لصفحة شاغرة أو لعبارة نصية.
+    if (!contact.isRented || !telephone) {
+        return null;
+    }
+
+    const schema = {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        serviceType: serviceName,
+        areaServed: { "@type": "City", name: cityName },
+        provider: {
+            "@type": "LocalBusiness",
+            name: `${serviceName} ${cityName}`,
+            telephone: `+${telephone}`,
+            areaServed: { "@type": "City", name: cityName },
+            url: canonical,
+            ...(contact.googleMapsUrl ? { hasMap: contact.googleMapsUrl } : {}),
+        },
+    };
+
+    return (
+        <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+                __html: JSON.stringify(schema).replace(/</g, "\\u003c"),
+            }}
+        />
+    );
+}
+
 export default async function ServiceCityPage({ params }: { params: Promise<{ service: string; city: string }> }) {
     const { service: serviceParam, city: cityParam } = await params;
     if (!isServiceSlug(serviceParam) || !isCitySlug(cityParam)) notFound();
-    
+
     const service = services[serviceParam];
     const city = cities[cityParam];
-    const contactInfo = (city as any).phone || "للإيجار";
+
+    const contact = await getContactFor(service.slug, city.slug);
+    const canonical = getServiceCityUrl(service.slug, city.slug);
 
     return (
         <main className="container mx-auto px-4 py-8">
-            <h1 className="text-3xl font-bold mb-4">{service.name} في {city.name}</h1>
-            <p className="text-xl text-gray-700 mb-6">التواصل أو الحجز: {contactInfo}</p>
+            <h1 className="mb-4 text-3xl font-bold">{service.name} في {city.name}</h1>
+            <p className="mb-6 text-lg text-white/70">{service.intro}</p>
+
+            <section className="grid gap-4 sm:grid-cols-2">
+                <ContactBox
+                    label="واتساب"
+                    value={contact.whatsapp}
+                    href={contact.whatsapp?.dialable ? `https://wa.me/${contact.whatsapp.dialable}` : null}
+                />
+                <ContactBox
+                    label="اتصال"
+                    value={contact.phone}
+                    href={contact.phone?.dialable ? `tel:+${contact.phone.dialable}` : null}
+                />
+            </section>
+
+            {contact.googleMapsUrl ? (
+                <a
+                    href={contact.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="mt-4 inline-block text-[#e8ad45] underline-offset-4 hover:underline"
+                >
+                    الموقع على خرائط Google
+                </a>
+            ) : null}
+
+            <ServiceJsonLd
+                serviceName={service.name}
+                cityName={city.name}
+                canonical={canonical}
+                contact={contact}
+            />
         </main>
     );
 }
