@@ -3,8 +3,6 @@ import { notFound } from 'next/navigation';
 import {
     services,
     cities,
-    serviceSlugs,
-    citySlugs,
     isServiceSlug,
     isCitySlug,
     getServiceCityUrl,
@@ -18,21 +16,16 @@ import {
 } from '@/app/lib/service-contacts';
 
 /*
- * لا نستخدم dynamicParams = false هنا.
+ * تُبنى الصفحة عند كل طلب.
  *
- * مع إيقافها، أي صفحة يُعاد توليدها بعد revalidatePath تُعامل
- * كمسار خارج القائمة الثابتة فتعطي 404 بعد أول حفظ من لوحة الإدارة.
+ * التوليد المسبق لا يصلح هنا: البناء يجري في بيئة لا تحتوي
+ * ملف بيانات المعلنين، فتُولَّد كل الصفحات "للإيجار" وتبقى كذلك
+ * حتى تنتهي مدة التحديث — وقد يزورها Google في تلك الأثناء
+ * فلا يرى الرقم. قراءة ملف محلي رخيصة، فنقرأه مع كل طلب.
+ *
  * الروابط الخاطئة ما زالت تعطي 404 عبر notFound() بالأسفل.
  */
-export const dynamicParams = true;
-
-// شبكة أمان: تتحدث الصفحة تلقائيًا كل ساعة حتى لو ضاع
-// نداء revalidatePath القادم من لوحة الإدارة.
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-    return serviceSlugs.flatMap(service => citySlugs.map(city => ({ service, city })));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ service: string; city: string }> }): Promise<Metadata> {
     const { service: serviceParam, city: cityParam } = await params;
