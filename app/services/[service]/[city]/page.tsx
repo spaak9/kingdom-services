@@ -1,19 +1,45 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import {
     services,
     cities,
     isServiceSlug,
     isCitySlug,
-    getServiceCityUrl,
+    SITE_URL,
     WHATSAPP_NUMBER,
 } from '@/app/lib/service-data';
 import {
     getContactFor,
+    getContactUrlDigits,
     VACANT_LABEL,
     type ContactValue,
     type ResolvedContact,
 } from '@/app/lib/service-contacts';
+
+/*
+ * الرابط يحمل الرقم: /services/plumbing/al-hariq-0511567408
+ *
+ * الجزء الأخير من المسار هو ما يعرضه Google في السطر الرمادي،
+ * فوجود الرقم فيه يجعله يظهر هناك أيضًا. المقطع قد يصل بصيغتين:
+ * باسم المدينة وحده، أو باسم المدينة متبوعًا بشرطة وأرقام.
+ */
+function parseCityParam(cityParam: string) {
+    if (isCitySlug(cityParam)) {
+        return { citySlug: cityParam, digits: null as string | null };
+    }
+
+    const match = cityParam.match(/^(.+)-(\d+)$/);
+
+    if (match && isCitySlug(match[1])) {
+        return { citySlug: match[1], digits: match[2] };
+    }
+
+    return null;
+}
+
+function buildCityPath(citySlug: string, digits: string | null) {
+    return digits ? `${citySlug}-${digits}` : citySlug;
+}
 
 /*
  * تُبنى الصفحة عند كل طلب.
@@ -29,10 +55,11 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ service: string; city: string }> }): Promise<Metadata> {
     const { service: serviceParam, city: cityParam } = await params;
-    if (!isServiceSlug(serviceParam) || !isCitySlug(cityParam)) return { title: "الصفحة غير موجودة", robots: { index: false, follow: false } };
+    const parsed = parseCityParam(cityParam);
+    if (!isServiceSlug(serviceParam) || !parsed) return { title: "الصفحة غير موجودة", robots: { index: false, follow: false } };
 
     const service = services[serviceParam];
-    const city = cities[cityParam];
+    const city = cities[parsed.citySlug];
 
     const contact = await getContactFor(service.slug, city.slug);
 
@@ -49,7 +76,8 @@ export async function generateMetadata({ params }: { params: Promise<{ service: 
     const description = contact.isRented
         ? `${service.searchName} ${city.name} — للتواصل والحجز: ${contact.displayValue}. ${service.intro}`
         : `${service.pluralName} في ${city.name}. ${service.intro}`;
-    const canonical = getServiceCityUrl(service.slug, city.slug);
+    // الرابط المعتمد يحمل الرقم عند التأجير، وبدونه عند الشغور.
+    const canonical = `${SITE_URL}/services/${service.slug}/${buildCityPath(city.slug, getContactUrlDigits(contact))}`;
 
     return {
         // absolute حتى لا يضيف القالب في layout اسم الموقع بعد الرقم.
@@ -147,13 +175,29 @@ function ServiceJsonLd({ serviceName, cityName, canonical, contact }: { serviceN
 
 export default async function ServiceCityPage({ params }: { params: Promise<{ service: string; city: string }> }) {
     const { service: serviceParam, city: cityParam } = await params;
-    if (!isServiceSlug(serviceParam) || !isCitySlug(cityParam)) notFound();
+    const parsed = parseCityParam(cityParam);
+    if (!isServiceSlug(serviceParam) || !parsed) notFound();
 
     const service = services[serviceParam];
-    const city = cities[cityParam];
+    const city = cities[parsed.citySlug];
 
     const contact = await getContactFor(service.slug, city.slug);
-    const canonical = getServiceCityUrl(service.slug, city.slug);
+    const digits = getContactUrlDigits(contact);
+
+    /*
+     * رابط واحد معتمد لكل صفحة. إذا وصل الزائر برابط قديم
+     * (بلا رقم بعد التأجير، أو برقم قديم بعد تغييره، أو برقم
+     * بعد انتهاء الإيجار) نحوّله تحويلًا دائمًا إلى الرابط الحالي
+     * حتى لا تتكرر الصفحة في نتائج البحث.
+     */
+    if (parsed.digits !== digits) {
+        permanentRedirect(
+            `/services/${service.slug}/${buildCityPath(city.slug, digits)}`,
+        );
+    }
+
+    // الرابط المعتمد يحمل الرقم عند التأجير، وبدونه عند الشغور.
+    const canonical = `${SITE_URL}/services/${service.slug}/${buildCityPath(city.slug, digits)}`;
 
     return (
         <main className="container mx-auto px-4 py-8">

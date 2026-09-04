@@ -193,6 +193,27 @@ export const getServiceContacts = cache(
   },
 );
 
+/*
+ * الأرقام التي تُلحق بالرابط: نستخدم الرقم كما كتبه المعلن
+ * (0511567408) لا الصيغة الدولية، ليطابق ما يظهر في العنوان.
+ * تعود null إذا كان الصندوق عبارة نصية لا رقمًا.
+ */
+export function getContactUrlDigits(
+  contact: ResolvedContact,
+) {
+  if (!contact.isRented) {
+    return null;
+  }
+
+  const primary = contact.phone ?? contact.whatsapp;
+
+  if (!primary?.dialable) {
+    return null;
+  }
+
+  return primary.raw.replace(/\D/g, "") || null;
+}
+
 export async function getContactFor(
   serviceSlug: string,
   citySlug: string,
